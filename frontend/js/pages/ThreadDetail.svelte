@@ -27,26 +27,15 @@
     type PromptInputMessage,
   } from "$lib/components/ai-elements/prompt-input";
 
-  import { getDisplayItemKey, mergeToolMessages } from "$lib/types/thread";
+  import {
+    getDisplayItemKey,
+    mergeToolMessages,
+    selectActiveIdOrDefault,
+    type DatabaseConnection,
+    type ModelConfig,
+    type UserConfigResponse,
+  } from "$lib/types/thread";
   import { UseThreadPolling } from "$lib/hooks/use-thread-polling.svelte";
-
-  type DatabaseConnection = { id: number; name: string; is_active: boolean };
-  type ModelConfig = {
-    id: number;
-    display_name: string;
-    is_active: boolean;
-    api_key_is_active: boolean;
-  };
-
-  type UserConfigResponse = {
-    configured: boolean;
-    defaults: {
-      database_connection_id: number | null;
-      model_config_id: number | null;
-    };
-    database_connections: DatabaseConnection[];
-    model_configs: ModelConfig[];
-  };
 
   interface Props {
     threadId: number;
@@ -106,23 +95,17 @@
 
       await polling.loadThread(threadId);
 
-      const threadDbId = polling.thread?.database_connection_id;
-      const threadDbActive = polling.thread?.database_connection_is_active;
+      selectedDatabaseId = selectActiveIdOrDefault(
+        polling.thread?.database_connection_id,
+        polling.thread?.database_connection_is_active,
+        cfg.data.defaults.database_connection_id
+      );
 
-      selectedDatabaseId = threadDbId && threadDbActive
-        ? String(threadDbId)
-        : cfg.data.defaults.database_connection_id
-          ? String(cfg.data.defaults.database_connection_id)
-          : "";
-
-      const threadModelId = polling.thread?.model_config_id;
-      const threadModelActive = polling.thread?.model_config_is_active;
-
-      selectedModelId = threadModelId && threadModelActive
-        ? String(threadModelId)
-        : cfg.data.defaults.model_config_id
-          ? String(cfg.data.defaults.model_config_id)
-          : "";
+      selectedModelId = selectActiveIdOrDefault(
+        polling.thread?.model_config_id,
+        polling.thread?.model_config_is_active,
+        cfg.data.defaults.model_config_id
+      );
     } catch (error) {
       console.error("Failed to load thread:", error);
     } finally {

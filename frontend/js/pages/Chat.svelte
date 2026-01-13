@@ -24,26 +24,14 @@
     type PromptInputMessage,
   } from "$lib/components/ai-elements/prompt-input";
 
-  import { getDisplayItemKey, mergeToolMessages } from "$lib/types/thread";
+  import {
+    getDisplayItemKey,
+    mergeToolMessages,
+    type DatabaseConnection,
+    type ModelConfig,
+    type UserConfigResponse,
+  } from "$lib/types/thread";
   import { UseThreadPolling } from "$lib/hooks/use-thread-polling.svelte";
-
-  type DatabaseConnection = { id: number; name: string; is_active: boolean };
-  type ModelConfig = {
-    id: number;
-    display_name: string;
-    is_active: boolean;
-    api_key_is_active: boolean;
-  };
-
-  type UserConfigResponse = {
-    configured: boolean;
-    defaults: {
-      database_connection_id: number | null;
-      model_config_id: number | null;
-    };
-    database_connections: DatabaseConnection[];
-    model_configs: ModelConfig[];
-  };
 
   const polling = new UseThreadPolling();
   let messagesContainer: HTMLDivElement | null = null;

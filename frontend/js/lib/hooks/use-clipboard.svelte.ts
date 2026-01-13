@@ -34,16 +34,7 @@ export class UseClipboard {
 		this.delay = delay;
 	}
 
-	/** Copies the given text to the users clipboard.
-	 *
-	 * ## Usage
-	 * ```ts
-	 * clipboard.copy('Hello, World!');
-	 * ```
-	 *
-	 * @param text
-	 * @returns
-	 */
+	/** Copies the given text to the users clipboard. */
 	async copy(text: string) {
 		if (this.timeout) {
 			this.#copiedStatus = undefined;
@@ -52,20 +43,14 @@ export class UseClipboard {
 
 		try {
 			await navigator.clipboard.writeText(text);
-
 			this.#copiedStatus = "success";
-
-			this.timeout = setTimeout(() => {
-				this.#copiedStatus = undefined;
-			}, this.delay);
 		} catch {
-			// an error can occur when not in the browser or if the user hasn't given clipboard access
 			this.#copiedStatus = "failure";
-
-			this.timeout = setTimeout(() => {
-				this.#copiedStatus = undefined;
-			}, this.delay);
 		}
+
+		this.timeout = setTimeout(() => {
+			this.#copiedStatus = undefined;
+		}, this.delay);
 
 		return this.#copiedStatus;
 	}

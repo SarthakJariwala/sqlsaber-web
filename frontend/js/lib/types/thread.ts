@@ -2,6 +2,30 @@
 
 export type ThreadStatus = "pending" | "running" | "completed" | "error";
 
+// User configuration types shared across Chat and Settings pages
+export interface DatabaseConnection {
+  id: number;
+  name: string;
+  is_active: boolean;
+}
+
+export interface ModelConfig {
+  id: number;
+  display_name: string;
+  is_active: boolean;
+  api_key_is_active: boolean;
+}
+
+export interface UserConfigResponse {
+  configured: boolean;
+  defaults: {
+    database_connection_id: number | null;
+    model_config_id: number | null;
+  };
+  database_connections: DatabaseConnection[];
+  model_configs: ModelConfig[];
+}
+
 export interface MessageData {
   id: number;
   type: "user" | "assistant" | "thinking" | "tool_call" | "tool_result";
@@ -89,6 +113,21 @@ export function mergeToolMessages(messages: MessageData[]): DisplayItem[] {
 // Check if a message ID is a temporary client-side ID (timestamp-based)
 export function isTempMessageId(id: number): boolean {
   return id > 1000000000000;
+}
+
+// Select an active ID or fall back to a default ID
+export function selectActiveIdOrDefault(
+  id: number | null | undefined,
+  isActive: boolean | null | undefined,
+  defaultId: number | null | undefined
+): string {
+  if (id && isActive) {
+    return String(id);
+  }
+  if (defaultId) {
+    return String(defaultId);
+  }
+  return "";
 }
 
 // Format a date string for display

@@ -73,47 +73,39 @@ export interface SqlResult {
 	error?: string;
 }
 
-// Parse tool arguments - handles both string (JSON) and object formats
+function tryParseJson(value: unknown, fallback: unknown): unknown {
+	if (typeof value !== "string") {
+		return value;
+	}
+	try {
+		return JSON.parse(value);
+	} catch {
+		return fallback;
+	}
+}
+
 export function parseToolArgs(args: unknown): Record<string, unknown> {
 	if (!args) {
 		return {};
 	}
-	// If it's already an object, return it
 	if (typeof args === "object" && args !== null) {
 		return args as Record<string, unknown>;
 	}
-	// If it's a string, try to parse as JSON
-	if (typeof args === "string") {
-		if (args.trim() === "") {
-			return {};
-		}
-		try {
-			return JSON.parse(args);
-		} catch {
-			return { raw: args };
-		}
+	if (typeof args === "string" && args.trim() === "") {
+		return {};
 	}
-	return {};
+	const parsed = tryParseJson(args, { raw: args });
+	return parsed as Record<string, unknown>;
 }
 
-// Parse tool results - handles both string (JSON) and object formats
 export function parseToolResult(result: unknown): unknown {
 	if (!result) {
 		return null;
 	}
-	// If it's already an object, return it
 	if (typeof result === "object") {
 		return result;
 	}
-	// If it's a string, try to parse as JSON
-	if (typeof result === "string") {
-		try {
-			return JSON.parse(result);
-		} catch {
-			return result;
-		}
-	}
-	return result;
+	return tryParseJson(result, result);
 }
 
 // Format SQL results as markdown table
