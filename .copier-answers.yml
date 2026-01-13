@@ -1,0 +1,12 @@
+# Changes here will be overwritten by Copier
+_commit: v0.18.1
+_src_path: gh:SarthakJariwala/django-vite-inertia
+allauth: true
+database: postgresql
+docker_dev: true
+docker_prod: true
+frontend: svelte
+project_name: sqlsaber
+starter_kit: true
+tailwind_css: true
+

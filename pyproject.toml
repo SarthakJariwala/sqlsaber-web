@@ -1,0 +1,20 @@
+[project]
+name = "sqlsaber_web"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "django-environ>=0.11.2",
+    "django>=5.1.4",
+    "django-vite>=3.0.5",
+    "inertia-django>=0.6.0",
+    "psycopg>=3.2.3",
+    "psycopg-binary>=3.2.3",
+    "django-allauth>=65.11.2",
+    "whitenoise>=6.8.2",
+    "gunicorn>=23.0.0",
+    "django-cotton>=2.5.1",
+    "procrastinate[django]>=3.6.0",
+    "sqlsaber>=0.46.0",
+]
