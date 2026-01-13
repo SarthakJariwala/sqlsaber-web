@@ -37,9 +37,7 @@ async def run_sqlsaber_query(
         )(thread_id)
 
         if not runtime_config.database_connection:
-            raise RuntimeError(
-                "Database connection is empty. Update it in /settings."
-            )
+            raise RuntimeError("Database connection is empty. Update it in /settings.")
 
         async with SQLSaber(
             database=runtime_config.database_connection,

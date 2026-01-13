@@ -1,6 +1,11 @@
 """Services module for sqlsaber_web business logic."""
 
 from .api_helpers import api_login_required, key_preview, parse_json_body
+from .serializers import (
+    build_thread_with_messages_props,
+    build_threads_list_props,
+    build_user_config_props,
+)
 from .threads import (
     get_thread_for_user,
     serialize_thread,
@@ -24,6 +29,10 @@ __all__ = [
     "api_login_required",
     "key_preview",
     "parse_json_body",
+    # Serializers
+    "build_thread_with_messages_props",
+    "build_threads_list_props",
+    "build_user_config_props",
     # Thread services
     "get_thread_for_user",
     "serialize_thread",

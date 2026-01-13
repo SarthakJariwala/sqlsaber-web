@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { onMount, onDestroy } from "svelte";
   import { Link, router } from "@inertiajs/svelte";
   import axios from "axios";
   import { ChevronLeft, Settings } from "@lucide/svelte";
@@ -33,23 +32,38 @@
     selectActiveIdOrDefault,
     type DatabaseConnection,
     type ModelConfig,
-    type UserConfigResponse,
+    type ThreadData,
+    type MessageData,
   } from "$lib/types/thread";
-  import { UseThreadPolling } from "$lib/hooks/use-thread-polling.svelte";
+  import { useThreadPolling } from "$lib/hooks/use-thread-polling.svelte";
 
   interface Props {
-    threadId: number;
+    thread: ThreadData;
+    messages: MessageData[];
+    configured: boolean;
+    defaults: {
+      database_connection_id: number | null;
+      model_config_id: number | null;
+    };
+    database_connections: DatabaseConnection[];
+    model_configs: ModelConfig[];
   }
-  let { threadId }: Props = $props();
+  let props: Props = $props();
 
-  const polling = new UseThreadPolling();
+  // Redirect if not configured
+  if (!props.configured) {
+    router.visit("/settings/");
+  }
+
+  const polling = useThreadPolling(props.thread, props.messages);
+
   let messagesContainer: HTMLDivElement | null = null;
 
-  let loading = $state(true);
-  let configLoading = $state(true);
+  let loading = $state(false);
+  let configLoading = $state(false);
 
-  let databaseConnections = $state<DatabaseConnection[]>([]);
-  let modelConfigs = $state<ModelConfig[]>([]);
+  let databaseConnections = $state<DatabaseConnection[]>(props.database_connections);
+  let modelConfigs = $state<ModelConfig[]>(props.model_configs);
 
   let activeDatabaseConnections = $derived(
     databaseConnections.filter((d) => d.is_active)
@@ -58,8 +72,20 @@
     modelConfigs.filter((m) => m.is_active && m.api_key_is_active)
   );
 
-  let selectedDatabaseId = $state("");
-  let selectedModelId = $state("");
+  let selectedDatabaseId = $state(
+    selectActiveIdOrDefault(
+      props.thread.database_connection_id,
+      props.thread.database_connection_is_active,
+      props.defaults.database_connection_id
+    )
+  );
+  let selectedModelId = $state(
+    selectActiveIdOrDefault(
+      props.thread.model_config_id,
+      props.thread.model_config_is_active,
+      props.defaults.model_config_id
+    )
+  );
 
   let selectedDatabaseLabel = $derived(
     activeDatabaseConnections.find((d) => String(d.id) === selectedDatabaseId)
@@ -82,38 +108,6 @@
 
   let displayMessages = $derived(mergeToolMessages(polling.messages));
 
-  onMount(async () => {
-    try {
-      const cfg = await axios.get<UserConfigResponse>("/api/user/config/");
-      databaseConnections = cfg.data.database_connections;
-      modelConfigs = cfg.data.model_configs;
-
-      if (!cfg.data.configured) {
-        router.visit("/settings/");
-        return;
-      }
-
-      await polling.loadThread(threadId);
-
-      selectedDatabaseId = selectActiveIdOrDefault(
-        polling.thread?.database_connection_id,
-        polling.thread?.database_connection_is_active,
-        cfg.data.defaults.database_connection_id
-      );
-
-      selectedModelId = selectActiveIdOrDefault(
-        polling.thread?.model_config_id,
-        polling.thread?.model_config_is_active,
-        cfg.data.defaults.model_config_id
-      );
-    } catch (error) {
-      console.error("Failed to load thread:", error);
-    } finally {
-      configLoading = false;
-      loading = false;
-    }
-  });
-
   $effect(() => {
     if (polling.messages.length > 0 && messagesContainer) {
       messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -124,7 +118,7 @@
     const prompt = message.text?.trim();
     if (!prompt || !polling.thread) return;
 
-    polling.chatStatus = "submitted";
+    polling.setChatStatus("submitted");
 
     try {
       await axios.post(`/api/threads/${polling.thread.id}/continue/`, {
@@ -149,13 +143,9 @@
       }
 
       console.error("Submit error:", error);
-      polling.chatStatus = "error";
+      polling.setChatStatus("error");
     }
   }
-
-  onDestroy(() => {
-    polling.stop();
-  });
 </script>
 
 <div class="flex h-screen flex-col">

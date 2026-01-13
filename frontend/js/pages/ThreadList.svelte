@@ -1,7 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte";
   import { Link } from "@inertiajs/svelte";
-  import axios from "axios";
   import { Settings } from "@lucide/svelte";
   import { Button } from "$lib/components/ui/button";
   import {
@@ -10,23 +8,14 @@
     STATUS_BADGE_STYLES,
   } from "$lib/types/thread";
 
-  let threads = $state<ThreadSummary[]>([]);
-  let loading = $state(true);
-  let error = $state<string | null>(null);
+  interface Props {
+    threads: ThreadSummary[];
+  }
 
-  onMount(async () => {
-    try {
-      const response = await axios.get<{ threads: ThreadSummary[] }>(
-        "/api/threads/"
-      );
-      threads = response.data.threads;
-    } catch (err) {
-      error = "Failed to load threads";
-      console.error(err);
-    } finally {
-      loading = false;
-    }
-  });
+  let { threads }: Props = $props();
+
+  let loading = $state(false);
+  let error = $state<string | null>(null);
 </script>
 
 <div class="flex h-screen flex-col">

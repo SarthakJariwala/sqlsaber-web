@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { onMount, onDestroy } from "svelte";
   import { Link, router } from "@inertiajs/svelte";
   import axios from "axios";
   import { Menu, Settings } from "@lucide/svelte";
@@ -29,16 +28,32 @@
     mergeToolMessages,
     type DatabaseConnection,
     type ModelConfig,
-    type UserConfigResponse,
   } from "$lib/types/thread";
-  import { UseThreadPolling } from "$lib/hooks/use-thread-polling.svelte";
+  import { useThreadPolling } from "$lib/hooks/use-thread-polling.svelte";
 
-  const polling = new UseThreadPolling();
+  interface Props {
+    configured: boolean;
+    onboarding_completed: boolean;
+    defaults: {
+      database_connection_id: number | null;
+      model_config_id: number | null;
+    };
+    database_connections: DatabaseConnection[];
+    model_configs: ModelConfig[];
+  }
+
+  let props = $props<Props>();
+
+  if (!props.configured) {
+    router.visit("/settings/");
+  }
+
+  const polling = useThreadPolling(null, []);
   let messagesContainer: HTMLDivElement | null = null;
 
-  let configLoading = $state(true);
-  let databaseConnections = $state<DatabaseConnection[]>([]);
-  let modelConfigs = $state<ModelConfig[]>([]);
+  let configLoading = $state(false);
+  let databaseConnections = $state<DatabaseConnection[]>(props.database_connections);
+  let modelConfigs = $state<ModelConfig[]>(props.model_configs);
 
   let activeDatabaseConnections = $derived(
     databaseConnections.filter((d) => d.is_active)
@@ -47,8 +62,16 @@
     modelConfigs.filter((m) => m.is_active && m.api_key_is_active)
   );
 
-  let selectedDatabaseId = $state("");
-  let selectedModelId = $state("");
+  let selectedDatabaseId = $state(
+    props.defaults.database_connection_id
+      ? String(props.defaults.database_connection_id)
+      : ""
+  );
+  let selectedModelId = $state(
+    props.defaults.model_config_id
+      ? String(props.defaults.model_config_id)
+      : ""
+  );
 
   let selectedDatabaseLabel = $derived(
     activeDatabaseConnections.find((d) => String(d.id) === selectedDatabaseId)
@@ -71,26 +94,6 @@
 
   let displayMessages = $derived(mergeToolMessages(polling.messages));
 
-  onMount(async () => {
-    try {
-      const response = await axios.get<UserConfigResponse>("/api/user/config/");
-      databaseConnections = response.data.database_connections;
-      modelConfigs = response.data.model_configs;
-      selectedDatabaseId = response.data.defaults.database_connection_id
-        ? String(response.data.defaults.database_connection_id)
-        : "";
-      selectedModelId = response.data.defaults.model_config_id
-        ? String(response.data.defaults.model_config_id)
-        : "";
-
-      if (!response.data.configured) {
-        router.visit("/settings/");
-      }
-    } finally {
-      configLoading = false;
-    }
-  });
-
   $effect(() => {
     if (polling.messages.length > 0 && messagesContainer) {
       messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -105,7 +108,7 @@
       return;
     }
 
-    polling.chatStatus = "submitted";
+    polling.setChatStatus("submitted");
 
     try {
       if (!polling.thread) {
@@ -126,8 +129,6 @@
         polling.setRunning();
         polling.addTempUserMessage(prompt);
       }
-
-      polling.start();
     } catch (error) {
       if (axios.isAxiosError(error)) {
         const redirect = (error.response?.data as { redirect?: string } | undefined)
@@ -139,13 +140,9 @@
       }
 
       console.error("Submit error:", error);
-      polling.chatStatus = "error";
+      polling.setChatStatus("error");
     }
   }
-
-  onDestroy(() => {
-    polling.stop();
-  });
 </script>
 
 <div class="flex h-screen flex-col">
