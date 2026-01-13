@@ -3,7 +3,7 @@ from __future__ import annotations
 from django.http import JsonResponse
 from django.shortcuts import redirect
 
-from .user_config_store import compute_user_config_status
+from .services import compute_user_config_status
 
 
 class RequireUserConfigurationMiddleware:

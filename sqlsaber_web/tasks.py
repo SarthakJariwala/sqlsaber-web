@@ -9,8 +9,8 @@ from pydantic_core import to_jsonable_python
 from sqlsaber import SQLSaber
 
 from .models import Thread
+from .services import get_runtime_config_for_thread_id
 from .streaming import DatabaseStreamingHandler
-from .user_config_store import get_runtime_config_for_thread_id
 
 # TypeAdapter for deserializing message history from JSON
 _MessageHistoryAdapter = pydantic.TypeAdapter(list[ModelMessage])

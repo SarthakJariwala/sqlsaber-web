@@ -1,6 +1,3 @@
-import json
-from functools import wraps
-
 from django.db import IntegrityError
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET, require_POST
@@ -13,138 +10,31 @@ from .models import (
     UserModelConfig,
     UserSettings,
 )
-from .tasks import run_sqlsaber_query
-from .user_config_store import (
+from .services import (
+    api_login_required,
     compute_user_config_status,
     ensure_user_defaults,
     get_or_create_user_settings,
+    get_selected_or_default_db,
+    get_selected_or_default_model,
+    get_thread_for_user,
+    key_preview,
+    parse_json_body,
     parse_provider,
+    serialize_thread,
+    serialize_thread_summary,
+    threads_queryset_for_user,
 )
-
-
-def api_login_required(view_func):
-    @wraps(view_func)
-    def _wrapped(request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return JsonResponse({"error": "Authentication required"}, status=401)
-        return view_func(request, *args, **kwargs)
-
-    return _wrapped
-
-
-def _parse_json_body(request) -> tuple[dict | None, JsonResponse | None]:
-    """Parse JSON from request body. Returns (data, None) on success or (None, error_response) on failure."""
-    try:
-        return json.loads(request.body), None
-    except json.JSONDecodeError:
-        return None, JsonResponse({"error": "Invalid JSON"}, status=400)
-
-
-def _threads_queryset_for_user(user):
-    return Thread.objects.filter(user=user).select_related(
-        "database_connection",
-        "model_config",
-    )
-
-
-def _get_thread_for_user(user, thread_id: int) -> Thread | None:
-    try:
-        return _threads_queryset_for_user(user).get(pk=thread_id)
-    except Thread.DoesNotExist:
-        return None
-
-
-def _serialize_thread_summary(thread: Thread) -> dict:
-    """Serialize thread for list views (without error details)."""
-
-    db = getattr(thread, "database_connection", None)
-    model = getattr(thread, "model_config", None)
-
-    return {
-        "id": thread.id,
-        "title": thread.title,
-        "status": thread.status,
-        "database_connection_id": thread.database_connection_id,
-        "database_connection_name": db.name if db else None,
-        "database_connection_is_active": db.is_active if db else None,
-        "model_config_id": thread.model_config_id,
-        "model_config_display_name": model.display_name if model else None,
-        "model_config_model_name": model.model_name if model else None,
-        "model_config_is_active": model.is_active if model else None,
-        "created_at": thread.created_at.isoformat(),
-        "updated_at": thread.updated_at.isoformat(),
-    }
-
-
-def _serialize_thread(thread: Thread) -> dict:
-    """Serialize thread with full details including error message."""
-    return {
-        **_serialize_thread_summary(thread),
-        "error": thread.error_message,
-    }
-
-
-def _get_selected_or_default_db(
-    user,
-    *,
-    selected_id: int | None,
-) -> UserDatabaseConnection | None:
-    settings = ensure_user_defaults(user)
-
-    db_id = (
-        selected_id
-        if selected_id is not None
-        else settings.default_database_connection_id
-    )
-    if not db_id:
-        return None
-
-    return UserDatabaseConnection.objects.filter(
-        user=user,
-        id=db_id,
-        is_active=True,
-    ).first()
-
-
-def _get_selected_or_default_model(
-    user,
-    *,
-    selected_id: int | None,
-) -> UserModelConfig | None:
-    settings = ensure_user_defaults(user)
-
-    model_id = (
-        selected_id if selected_id is not None else settings.default_model_config_id
-    )
-    if not model_id:
-        return None
-
-    return (
-        UserModelConfig.objects.filter(
-            user=user,
-            id=model_id,
-            is_active=True,
-            api_key__is_active=True,
-        )
-        .select_related("api_key")
-        .first()
-    )
-
-
-def _key_preview(value: str) -> str:
-    value = value or ""
-    if len(value) <= 4:
-        return "****"
-    return f"****{value[-4:]}"
+from .tasks import run_sqlsaber_query
 
 
 @api_login_required
 def threads_api(request):
     """Handle GET (list threads) and POST (create thread) on /api/threads/."""
     if request.method == "GET":
-        threads = _threads_queryset_for_user(request.user).order_by("-updated_at")
+        threads = threads_queryset_for_user(request.user).order_by("-updated_at")
         return JsonResponse(
-            {"threads": [_serialize_thread_summary(t) for t in threads]}
+            {"threads": [serialize_thread_summary(t) for t in threads]}
         )
     if request.method == "POST":
         return create_thread(request)
@@ -155,7 +45,7 @@ def create_thread(request):
     if not request.user.is_authenticated:
         return JsonResponse({"error": "Authentication required"}, status=401)
 
-    data, error = _parse_json_body(request)
+    data, error = parse_json_body(request)
     if error:
         return error
 
@@ -177,11 +67,11 @@ def create_thread(request):
             {"error": "model_config_id must be an integer"}, status=400
         )
 
-    db = _get_selected_or_default_db(
+    db = get_selected_or_default_db(
         request.user,
         selected_id=database_connection_id,
     )
-    model = _get_selected_or_default_model(
+    model = get_selected_or_default_model(
         request.user,
         selected_id=model_config_id,
     )
@@ -215,17 +105,17 @@ def create_thread(request):
 @require_GET
 @api_login_required
 def get_thread(request, thread_id: int):
-    thread = _get_thread_for_user(request.user, thread_id)
+    thread = get_thread_for_user(request.user, thread_id)
     if thread is None:
         return JsonResponse({"error": "Thread not found"}, status=404)
 
-    return JsonResponse(_serialize_thread(thread))
+    return JsonResponse(serialize_thread(thread))
 
 
 @require_GET
 @api_login_required
 def get_messages(request, thread_id: int):
-    thread = _get_thread_for_user(request.user, thread_id)
+    thread = get_thread_for_user(request.user, thread_id)
     if thread is None:
         return JsonResponse({"error": "Thread not found"}, status=404)
 
@@ -242,7 +132,7 @@ def get_messages(request, thread_id: int):
 
     return JsonResponse(
         {
-            "thread": _serialize_thread(thread),
+            "thread": serialize_thread(thread),
             "messages": [
                 {
                     "id": msg.id,
@@ -260,7 +150,7 @@ def get_messages(request, thread_id: int):
 @api_login_required
 def continue_thread(request, thread_id: int):
     """Continue an existing thread with a follow-up message."""
-    data, error = _parse_json_body(request)
+    data, error = parse_json_body(request)
     if error:
         return error
 
@@ -282,7 +172,7 @@ def continue_thread(request, thread_id: int):
             {"error": "model_config_id must be an integer"}, status=400
         )
 
-    thread = _get_thread_for_user(request.user, thread_id)
+    thread = get_thread_for_user(request.user, thread_id)
     if thread is None:
         return JsonResponse({"error": "Thread not found"}, status=404)
 
@@ -296,11 +186,11 @@ def continue_thread(request, thread_id: int):
     if thread.status == Thread.Status.PENDING:
         return JsonResponse({"error": "Thread has not started yet."}, status=409)
 
-    db = _get_selected_or_default_db(
+    db = get_selected_or_default_db(
         request.user,
         selected_id=database_connection_id,
     )
-    model = _get_selected_or_default_model(
+    model = get_selected_or_default_model(
         request.user,
         selected_id=model_config_id,
     )
@@ -411,7 +301,7 @@ def get_user_config(request):
                     "id": key.id,
                     "provider": key.provider,
                     "name": key.name,
-                    "preview": _key_preview(key.api_key),
+                    "preview": key_preview(key.api_key),
                     "is_active": key.is_active,
                 }
                 for key in keys
@@ -435,7 +325,7 @@ def get_user_config(request):
 @require_POST
 @api_login_required
 def add_api_key(request):
-    data, error = _parse_json_body(request)
+    data, error = parse_json_body(request)
     if error:
         return error
 
@@ -472,7 +362,7 @@ def add_api_key(request):
 @require_POST
 @api_login_required
 def update_api_key(request, key_id: int):
-    data, error = _parse_json_body(request)
+    data, error = parse_json_body(request)
     if error:
         return error
 
@@ -507,7 +397,7 @@ def update_api_key(request, key_id: int):
             "id": key.id,
             "provider": key.provider,
             "name": key.name,
-            "preview": _key_preview(key.api_key),
+            "preview": key_preview(key.api_key),
             "is_active": key.is_active,
         }
     )
@@ -516,7 +406,7 @@ def update_api_key(request, key_id: int):
 @require_POST
 @api_login_required
 def set_api_key_active(request, key_id: int):
-    data, error = _parse_json_body(request)
+    data, error = parse_json_body(request)
     if error:
         return error
 
@@ -548,7 +438,7 @@ def set_api_key_active(request, key_id: int):
             "id": key.id,
             "provider": key.provider,
             "name": key.name,
-            "preview": _key_preview(key.api_key),
+            "preview": key_preview(key.api_key),
             "is_active": key.is_active,
         }
     )
@@ -557,7 +447,7 @@ def set_api_key_active(request, key_id: int):
 @require_POST
 @api_login_required
 def add_database_connection(request):
-    data, error = _parse_json_body(request)
+    data, error = parse_json_body(request)
     if error:
         return error
 
@@ -604,7 +494,7 @@ def add_database_connection(request):
 @require_POST
 @api_login_required
 def update_database_connection(request, connection_id: int):
-    data, error = _parse_json_body(request)
+    data, error = parse_json_body(request)
     if error:
         return error
 
@@ -671,7 +561,7 @@ def update_database_connection(request, connection_id: int):
 @require_POST
 @api_login_required
 def set_database_connection_active(request, connection_id: int):
-    data, error = _parse_json_body(request)
+    data, error = parse_json_body(request)
     if error:
         return error
 
@@ -703,7 +593,7 @@ def set_database_connection_active(request, connection_id: int):
 @require_POST
 @api_login_required
 def add_model_config(request):
-    data, error = _parse_json_body(request)
+    data, error = parse_json_body(request)
     if error:
         return error
 
@@ -770,13 +660,15 @@ def add_model_config(request):
 @require_POST
 @api_login_required
 def update_model_config(request, model_id: int):
-    data, error = _parse_json_body(request)
+    data, error = parse_json_body(request)
     if error:
         return error
 
-    model = UserModelConfig.objects.filter(user=request.user, id=model_id).select_related(
-        "api_key"
-    ).first()
+    model = (
+        UserModelConfig.objects.filter(user=request.user, id=model_id)
+        .select_related("api_key")
+        .first()
+    )
     if model is None:
         return JsonResponse({"error": "Model not found"}, status=404)
 
@@ -861,7 +753,7 @@ def update_model_config(request, model_id: int):
 @require_POST
 @api_login_required
 def set_model_config_active(request, model_id: int):
-    data, error = _parse_json_body(request)
+    data, error = parse_json_body(request)
     if error:
         return error
 
@@ -869,9 +761,11 @@ def set_model_config_active(request, model_id: int):
     if not isinstance(is_active, bool):
         return JsonResponse({"error": "is_active must be a boolean"}, status=400)
 
-    model = UserModelConfig.objects.filter(user=request.user, id=model_id).select_related(
-        "api_key"
-    ).first()
+    model = (
+        UserModelConfig.objects.filter(user=request.user, id=model_id)
+        .select_related("api_key")
+        .first()
+    )
     if model is None:
         return JsonResponse({"error": "Model not found"}, status=404)
 
@@ -907,7 +801,7 @@ def set_model_config_active(request, model_id: int):
 @require_POST
 @api_login_required
 def update_user_settings(request):
-    data, error = _parse_json_body(request)
+    data, error = parse_json_body(request)
     if error:
         return error
 
