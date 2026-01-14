@@ -4,12 +4,19 @@
 
   import { Button } from "$lib/components/ui/button";
   import {
+    Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
+  } from "$lib/components/ui/card";
+  import {
     Field,
     FieldContent,
     FieldDescription,
     FieldLabel,
   } from "$lib/components/ui/field";
   import { Input } from "$lib/components/ui/input";
+  import { Separator } from "$lib/components/ui/separator";
   import { Textarea } from "$lib/components/ui/textarea";
 
   type DatabaseConnection = {
@@ -396,7 +403,7 @@
 
       <!-- 1) Database connections -->
       <section class="space-y-4">
-        <h2 class="text-base font-semibold">1) Database connections</h2>
+        <h2 class="text-base font-semibold">Database connections</h2>
 
         <Field>
           <FieldLabel>Default database</FieldLabel>
@@ -417,13 +424,13 @@
           </FieldContent>
         </Field>
 
-        <div class="space-y-2">
+        <div class="space-y-3">
           {#if props.database_connections.length === 0}
             <p class="text-sm text-muted-foreground">No database connections yet.</p>
           {:else}
-            <ul class="space-y-2 text-sm">
-              {#each props.database_connections as db (db.id)}
-                <li class="rounded border p-3">
+            {#each props.database_connections as db (db.id)}
+              <Card class="py-3">
+                <CardContent class="space-y-3">
                   <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0 flex-1">
                       <div class="flex items-center gap-2">
@@ -472,7 +479,8 @@
                   </div>
 
                   {#if editingDbId === db.id}
-                    <div class="mt-3 grid gap-3">
+                    <Separator />
+                    <div class="grid gap-3">
                       <div class="grid gap-3 md:grid-cols-2">
                         <Field>
                           <FieldLabel>Name</FieldLabel>
@@ -525,75 +533,84 @@
                       </div>
                     </div>
                   {/if}
-                </li>
-              {/each}
-            </ul>
+                </CardContent>
+              </Card>
+            {/each}
           {/if}
         </div>
 
-        <div class="grid gap-4 md:grid-cols-2">
-          <Field>
-            <FieldLabel for="db-name">Name</FieldLabel>
-            <FieldContent>
-              <Input
-                id="db-name"
-                placeholder="e.g. Analytics prod"
-                bind:value={newDbName}
-                autocomplete="off"
-              />
-            </FieldContent>
-          </Field>
+        <Card>
+          <CardHeader>
+            <CardTitle>Add database connection</CardTitle>
+          </CardHeader>
+          <CardContent class="space-y-4">
+            <div class="grid gap-4 md:grid-cols-2">
+              <Field>
+                <FieldLabel for="db-name">Name</FieldLabel>
+                <FieldContent>
+                  <Input
+                    id="db-name"
+                    placeholder="e.g. Analytics prod"
+                    bind:value={newDbName}
+                    autocomplete="off"
+                  />
+                </FieldContent>
+              </Field>
 
-          <Field>
-            <FieldLabel for="db-conn">Connection string</FieldLabel>
-            <FieldContent>
-              <Input
-                id="db-conn"
-                placeholder="e.g. postgresql://user:pass@host:5432/db"
-                bind:value={newDbConnectionString}
-                autocomplete="off"
-              />
-              <FieldDescription>
-                Stored in the database for your user.
-              </FieldDescription>
-            </FieldContent>
-          </Field>
-        </div>
+              <Field>
+                <FieldLabel for="db-conn">Connection string</FieldLabel>
+                <FieldContent>
+                  <Input
+                    id="db-conn"
+                    placeholder="e.g. postgresql://user:pass@host:5432/db"
+                    bind:value={newDbConnectionString}
+                    autocomplete="off"
+                  />
+                  <FieldDescription>
+                    Stored in the database for your user.
+                  </FieldDescription>
+                </FieldContent>
+              </Field>
+            </div>
 
-        <Field>
-          <FieldLabel for="db-memory">DB-specific memory (optional)</FieldLabel>
-          <FieldContent>
-            <Textarea
-              id="db-memory"
-              rows={5}
-              placeholder="Injected only when running against this DB"
-              bind:value={newDbMemory}
-            />
-          </FieldContent>
-        </Field>
+            <Field>
+              <FieldLabel for="db-memory">DB-specific memory (optional)</FieldLabel>
+              <FieldContent>
+                <Textarea
+                  id="db-memory"
+                  rows={5}
+                  placeholder="Injected only when running against this DB"
+                  bind:value={newDbMemory}
+                />
+              </FieldContent>
+            </Field>
 
-        <div>
-          <Button
-            type="button"
-            disabled={addingDb}
-            onclick={addDatabaseConnection}
-          >
-            {addingDb ? "Adding..." : "Add database"}
-          </Button>
-        </div>
+            <div>
+              <Button
+                type="button"
+                disabled={addingDb}
+                onclick={addDatabaseConnection}
+              >
+                {addingDb ? "Adding..." : "Add database"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </section>
+
+      <Separator />
 
       <!-- 2) API keys -->
       <section class="space-y-4">
-        <h2 class="text-base font-semibold">2) Provider API keys</h2>
+        <h2 class="text-base font-semibold">API keys</h2>
 
-        <div class="space-y-2">
+        <div class="space-y-3">
           {#if props.api_keys.length === 0}
             <p class="text-sm text-muted-foreground">No API keys yet.</p>
           {:else}
-            <ul class="space-y-2 text-sm">
-              {#each props.api_keys as key (key.id)}
-                <li class="rounded border p-3">
+            {#each props.api_keys as key (key.id)}
+              <Card class="py-3">
+                <CardContent class="space-y-3">
                   <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0 flex-1">
                       <div class="flex items-center gap-2">
@@ -645,7 +662,8 @@
                   </div>
 
                   {#if editingKeyId === key.id}
-                    <div class="mt-3 grid gap-3 md:grid-cols-2">
+                    <Separator />
+                    <div class="grid gap-3 md:grid-cols-2">
                       <Field>
                         <FieldLabel>Label (optional)</FieldLabel>
                         <FieldContent>
@@ -687,64 +705,73 @@
                       </div>
                     </div>
                   {/if}
-                </li>
-              {/each}
-            </ul>
+                </CardContent>
+              </Card>
+            {/each}
           {/if}
         </div>
 
-        <div class="grid gap-4 md:grid-cols-2">
-          <Field>
-            <FieldLabel for="key-provider">Provider</FieldLabel>
-            <FieldContent>
-              <select
-                id="key-provider"
-                class="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                bind:value={newKeyProvider}
-              >
-                <option value="openai">OpenAI</option>
-                <option value="anthropic">Anthropic</option>
-                <option value="google">Google</option>
-              </select>
-            </FieldContent>
-          </Field>
+        <Card>
+          <CardHeader>
+            <CardTitle>Add API key</CardTitle>
+          </CardHeader>
+          <CardContent class="space-y-4">
+            <div class="grid gap-4 md:grid-cols-2">
+              <Field>
+                <FieldLabel for="key-provider">Provider</FieldLabel>
+                <FieldContent>
+                  <select
+                    id="key-provider"
+                    class="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    bind:value={newKeyProvider}
+                  >
+                    <option value="openai">OpenAI</option>
+                    <option value="anthropic">Anthropic</option>
+                    <option value="google">Google</option>
+                  </select>
+                </FieldContent>
+              </Field>
 
-          <Field>
-            <FieldLabel for="key-name">Label (optional)</FieldLabel>
-            <FieldContent>
-              <Input
-                id="key-name"
-                placeholder="e.g. Production key"
-                bind:value={newKeyName}
-                autocomplete="off"
-              />
-            </FieldContent>
-          </Field>
-        </div>
+              <Field>
+                <FieldLabel for="key-name">Label (optional)</FieldLabel>
+                <FieldContent>
+                  <Input
+                    id="key-name"
+                    placeholder="e.g. Production key"
+                    bind:value={newKeyName}
+                    autocomplete="off"
+                  />
+                </FieldContent>
+              </Field>
+            </div>
 
-        <Field>
-          <FieldLabel for="api-key">API key</FieldLabel>
-          <FieldContent>
-            <Input
-              id="api-key"
-              type="password"
-              placeholder="Enter an API key"
-              bind:value={newKeyValue}
-              autocomplete="off"
-            />
-          </FieldContent>
-        </Field>
+            <Field>
+              <FieldLabel for="api-key">API key</FieldLabel>
+              <FieldContent>
+                <Input
+                  id="api-key"
+                  type="password"
+                  placeholder="Enter an API key"
+                  bind:value={newKeyValue}
+                  autocomplete="off"
+                />
+              </FieldContent>
+            </Field>
 
-        <div>
-          <Button type="button" disabled={addingKey} onclick={addApiKey}>
-            {addingKey ? "Adding..." : "Add API key"}
-          </Button>
-        </div>
+            <div>
+              <Button type="button" disabled={addingKey} onclick={addApiKey}>
+                {addingKey ? "Adding..." : "Add API key"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </section>
+
+      <Separator />
 
       <!-- 3) Models -->
       <section class="space-y-4">
-        <h2 class="text-base font-semibold">3) Models</h2>
+        <h2 class="text-base font-semibold">Models</h2>
 
         <Field>
           <FieldLabel>Default model</FieldLabel>
@@ -765,13 +792,13 @@
           </FieldContent>
         </Field>
 
-        <div class="space-y-2">
+        <div class="space-y-3">
           {#if props.model_configs.length === 0}
             <p class="text-sm text-muted-foreground">No models yet.</p>
           {:else}
-            <ul class="space-y-2 text-sm">
-              {#each props.model_configs as m (m.id)}
-                <li class="rounded border p-3">
+            {#each props.model_configs as m (m.id)}
+              <Card class="py-3">
+                <CardContent class="space-y-3">
                   <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0 flex-1">
                       <div class="flex items-center gap-2">
@@ -820,7 +847,8 @@
                   </div>
 
                   {#if editingModelId === m.id}
-                    <div class="mt-3 grid gap-3 md:grid-cols-2">
+                    <Separator />
+                    <div class="grid gap-3 md:grid-cols-2">
                       <Field>
                         <FieldLabel>Display name</FieldLabel>
                         <FieldContent>
@@ -877,71 +905,78 @@
                       </div>
                     </div>
                   {/if}
-                </li>
-              {/each}
-            </ul>
+                </CardContent>
+              </Card>
+            {/each}
           {/if}
         </div>
 
-        <div class="grid gap-4 md:grid-cols-2">
-          <Field>
-            <FieldLabel for="model-display">Display name</FieldLabel>
-            <FieldContent>
-              <Input
-                id="model-display"
-                placeholder="e.g. GPT-4o mini"
-                bind:value={newModelDisplayName}
-                autocomplete="off"
-              />
-            </FieldContent>
-          </Field>
+        <Card>
+          <CardHeader>
+            <CardTitle>Add model</CardTitle>
+          </CardHeader>
+          <CardContent class="space-y-4">
+            <div class="grid gap-4 md:grid-cols-2">
+              <Field>
+                <FieldLabel for="model-display">Display name</FieldLabel>
+                <FieldContent>
+                  <Input
+                    id="model-display"
+                    placeholder="e.g. GPT-4o mini"
+                    bind:value={newModelDisplayName}
+                    autocomplete="off"
+                  />
+                </FieldContent>
+              </Field>
 
-          <Field>
-            <FieldLabel for="model-name">Model name</FieldLabel>
-            <FieldContent>
-              <Input
-                id="model-name"
-                placeholder="e.g. openai:gpt-4o-mini"
-                bind:value={newModelName}
-                autocomplete="off"
-              />
-              <FieldDescription>
-                Must be in SQLSaber format:
-                <span class="font-mono text-xs">provider:model</span>.
-              </FieldDescription>
-            </FieldContent>
-          </Field>
-        </div>
+              <Field>
+                <FieldLabel for="model-name">Model name</FieldLabel>
+                <FieldContent>
+                  <Input
+                    id="model-name"
+                    placeholder="e.g. openai:gpt-4o-mini"
+                    bind:value={newModelName}
+                    autocomplete="off"
+                  />
+                  <FieldDescription>
+                    Must be in SQLSaber format:
+                    <span class="font-mono text-xs">provider:model</span>.
+                  </FieldDescription>
+                </FieldContent>
+              </Field>
+            </div>
 
-        <Field>
-          <FieldLabel>API key for this model</FieldLabel>
-          <FieldContent>
-            <select
-              class="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              bind:value={newModelApiKeyId}
-            >
-              <option value="" disabled>Select an API key</option>
-              {#each activeApiKeys as key (key.id)}
-                <option value={String(key.id)}>
-                  {key.provider}{key.name ? ` — ${key.name}` : ""}
-                </option>
-              {/each}
-            </select>
-            <FieldDescription>
-              A model can only reference one API key.
-            </FieldDescription>
-          </FieldContent>
-        </Field>
+            <Field>
+              <FieldLabel>API key for this model</FieldLabel>
+              <FieldContent>
+                <select
+                  class="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  bind:value={newModelApiKeyId}
+                >
+                  <option value="" disabled>Select an API key</option>
+                  {#each activeApiKeys as key (key.id)}
+                    <option value={String(key.id)}>
+                      {key.provider}{key.name ? ` — ${key.name}` : ""}
+                    </option>
+                  {/each}
+                </select>
+                <FieldDescription>
+                  A model can only reference one API key.
+                </FieldDescription>
+              </FieldContent>
+            </Field>
 
-        <div>
-          <Button
-            type="button"
-            disabled={addingModel || activeApiKeys.length === 0}
-            onclick={addModelConfig}
-          >
-            {addingModel ? "Adding..." : "Add model"}
-          </Button>
-        </div>
+            <div>
+              <Button
+                type="button"
+                disabled={addingModel || activeApiKeys.length === 0}
+                onclick={addModelConfig}
+              >
+                {addingModel ? "Adding..." : "Add model"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </section>
 
       {#if errorMessage}
