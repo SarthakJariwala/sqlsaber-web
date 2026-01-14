@@ -10,7 +10,19 @@
 
 	let { initialInput = "", accept, multiple = true, children }: Props = $props();
 
-	let controller = new PromptInputController(initialInput, accept, multiple);
+	let controller = new PromptInputController();
+	let didInit = false;
+
+	$effect.pre(() => {
+		if (!didInit) {
+			controller.textInput.value = initialInput;
+			didInit = true;
+		}
+	});
+
+	$effect.pre(() => {
+		controller.attachments.setOptions({ accept, multiple });
+	});
 
 	setPromptInputProvider(controller);
 </script>

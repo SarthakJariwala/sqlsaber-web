@@ -18,6 +18,17 @@ export interface PromptInputMessage {
 
 export type ChatStatus = "submitted" | "streaming" | "error" | "idle";
 
+export type AttachmentsOptions = {
+	accept?: string;
+	multiple?: boolean;
+	maxFiles?: number;
+	maxFileSize?: number; // bytes
+	onError?: (err: {
+		code: "max_files" | "max_file_size" | "accept";
+		message: string;
+	}) => void;
+};
+
 export class AttachmentsContext {
 	files = $state<FileWithId[]>([]);
 	fileInputRef = $state<HTMLInputElement | null>(null);
@@ -32,6 +43,14 @@ export class AttachmentsContext {
 			message: string;
 		}) => void
 	) {}
+
+	setOptions = (options: AttachmentsOptions) => {
+		this.accept = options.accept;
+		this.multiple = options.multiple;
+		this.maxFiles = options.maxFiles;
+		this.maxFileSize = options.maxFileSize;
+		this.onError = options.onError;
+	};
 
 	openFileDialog = () => {
 		this.fileInputRef?.click();

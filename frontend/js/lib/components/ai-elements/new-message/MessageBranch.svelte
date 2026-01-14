@@ -19,17 +19,20 @@
 		...restProps
 	}: Props = $props();
 
-	// Create the branch context class
-	const branchContext = new MessageBranchClass(defaultBranch);
-
-	// Set up the context
+	const branchContext = new MessageBranchClass();
 	setMessageBranchContext(branchContext);
 
-	// Watch for branch changes and call the callback
-	// Using $derived to track changes without $effect
-	let previousBranch = $state(defaultBranch);
+	let didInit = false;
+	let previousBranch = $state(0);
 
 	$effect.pre(() => {
+		if (!didInit) {
+			branchContext.currentBranch = defaultBranch;
+			previousBranch = defaultBranch;
+			didInit = true;
+			return;
+		}
+
 		if (branchContext.currentBranch !== previousBranch) {
 			previousBranch = branchContext.currentBranch;
 			onBranchChange?.(branchContext.currentBranch);
