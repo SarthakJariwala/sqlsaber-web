@@ -74,7 +74,7 @@
   });
 </script>
 
-<div class={cn("my-3 rounded-lg border bg-card", className)}>
+<div class={cn("rounded-lg border bg-card", className)}>
   <button
     type="button"
     onclick={toggle}

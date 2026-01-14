@@ -53,11 +53,15 @@ export interface ColumnInfo {
 export interface SchemaInfo {
 	columns: Record<string, ColumnInfo>;
 	primary_keys: string[];
-	foreign_keys: Array<{
-		column: string;
-		references_table: string;
-		references_column: string;
-	}>;
+	foreign_keys: Array<
+		| string // String format: "column -> table.column"
+		| {
+				// Object format (standard)
+				column?: string;
+				references_table?: string;
+				references_column?: string;
+		  }
+	>;
 	indexes: string[];
 }
 
@@ -148,7 +152,7 @@ export function formatSchemaAsMarkdown(result: IntrospectSchemaResult): string {
 			parts.push("| --- | --- | --- | --- |");
 			for (const [colName, info] of columns) {
 				parts.push(
-					`| \`${colName}\` | ${info.type} | ${info.nullable ? "Yes" : "No"} | ${info.default ?? "-"} |`
+					`| \`${colName}\` | ${info.type} | ${info.nullable ? "Yes" : "No"} | ${info.default ?? "—"} |`
 				);
 			}
 			parts.push("");
@@ -156,21 +160,57 @@ export function formatSchemaAsMarkdown(result: IntrospectSchemaResult): string {
 
 		// Primary keys
 		if (schema.primary_keys && schema.primary_keys.length > 0) {
-			parts.push(`**Primary Key:** ${schema.primary_keys.map((k) => `\`${k}\``).join(", ")}\n`);
-		}
-
-		// Foreign keys
-		if (schema.foreign_keys && schema.foreign_keys.length > 0) {
-			parts.push("**Foreign Keys:**");
-			for (const fk of schema.foreign_keys) {
-				parts.push(`- \`${fk.column}\` → \`${fk.references_table}.${fk.references_column}\``);
-			}
+			parts.push("");
+			parts.push(`**Primary Key:** ${schema.primary_keys.map((k) => `\`${k}\``).join(", ")}`);
+			parts.push("");
 			parts.push("");
 		}
 
-		// Indexes
+		// Foreign keys - handle various data formats
+		if (schema.foreign_keys && schema.foreign_keys.length > 0) {
+			const parsedFks: Array<{ column: string; reference: string }> = [];
+
+			for (const fk of schema.foreign_keys) {
+				if (typeof fk === "string") {
+					// String format: "sample_id -> public.core_sample.id"
+					const match = fk.match(/^(.+?)\s*->\s*(.+)$/);
+					if (match) {
+						parsedFks.push({ column: match[1].trim(), reference: match[2].trim() });
+					}
+				} else if (typeof fk === "object" && fk !== null) {
+					// Object format
+					const col = fk.column ?? fk.constrained_columns?.[0];
+					const refTable = fk.references_table ?? fk.referred_table;
+					const refCol = fk.references_column ?? fk.referred_columns?.[0];
+					if (col && refTable && refCol) {
+						parsedFks.push({ column: col, reference: `${refTable}.${refCol}` });
+					}
+				}
+			}
+
+			if (parsedFks.length > 0) {
+				parts.push("**Foreign Keys:**");
+				parts.push("");
+				parts.push("| Column | References |");
+				parts.push("| --- | --- |");
+				for (const fk of parsedFks) {
+					parts.push(`| \`${fk.column}\` | \`${fk.reference}\` |`);
+				}
+				parts.push("");
+				parts.push("");
+			}
+		}
+
+		// Indexes - display as a table for better readability
 		if (schema.indexes && schema.indexes.length > 0) {
-			parts.push(`**Indexes:** ${schema.indexes.map((i) => `\`${i}\``).join(", ")}\n`);
+			parts.push("**Indexes:**");
+			parts.push("");
+			parts.push("| Index Name |");
+			parts.push("| --- |");
+			for (const idx of schema.indexes) {
+				parts.push(`| \`${idx}\` |`);
+			}
+			parts.push("");
 		}
 	}
 

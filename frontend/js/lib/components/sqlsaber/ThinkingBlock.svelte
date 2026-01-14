@@ -18,7 +18,7 @@
 	}
 </script>
 
-<div class={cn("my-2", className)}>
+<div class={cn("", className)}>
 	<button
 		type="button"
 		onclick={toggle}
