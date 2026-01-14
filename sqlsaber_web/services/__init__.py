@@ -2,6 +2,7 @@
 
 from .api_helpers import api_login_required, key_preview, parse_json_body
 from .serializers import (
+    build_settings_props,
     build_thread_with_messages_props,
     build_threads_list_props,
     build_user_config_props,
@@ -30,6 +31,7 @@ __all__ = [
     "key_preview",
     "parse_json_body",
     # Serializers
+    "build_settings_props",
     "build_thread_with_messages_props",
     "build_threads_list_props",
     "build_user_config_props",

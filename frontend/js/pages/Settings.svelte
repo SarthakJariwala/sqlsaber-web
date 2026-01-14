@@ -18,6 +18,7 @@
   import { Input } from "$lib/components/ui/input";
   import { Separator } from "$lib/components/ui/separator";
   import { Textarea } from "$lib/components/ui/textarea";
+  import * as Select from "$lib/components/ui/select/index.js";
 
   type DatabaseConnection = {
     id: number;
@@ -44,6 +45,18 @@
     is_active: boolean;
   };
 
+  type AvailableModel = {
+    id: string;
+    name: string;
+    description: string | null;
+    context_length: number | null;
+  };
+
+  type AvailableModelsCatalog = {
+    providers: { key: string; label: string }[];
+    models_by_provider: Record<string, AvailableModel[]>;
+  };
+
   interface Props {
     configured: boolean;
     onboarding_completed: boolean;
@@ -54,6 +67,7 @@
     database_connections: DatabaseConnection[];
     api_keys: ApiKey[];
     model_configs: ModelConfig[];
+    available_models: AvailableModelsCatalog;
     errors?: Record<string, string>;
   }
 
@@ -78,6 +92,43 @@
       : ""
   );
 
+  const PROVIDER_LABELS: Record<string, string> = {
+    openai: "OpenAI",
+    anthropic: "Anthropic",
+    google: "Google",
+  };
+
+  function providerLabel(provider: string) {
+    return PROVIDER_LABELS[provider] ?? provider;
+  }
+
+  function apiKeyLabel(key: ApiKey) {
+    const p = providerLabel(key.provider);
+    return key.name ? `${p} — ${key.name}` : p;
+  }
+
+  function providerFromModelId(modelId: string) {
+    if (!modelId || !modelId.includes(":")) return "";
+    return modelId.split(":", 1)[0];
+  }
+
+  function modelLabelFromCatalog(modelId: string, providerHint: string) {
+    if (!modelId) return "";
+    const provider = providerHint || providerFromModelId(modelId);
+    const models = props.available_models.models_by_provider[provider] ?? [];
+    return models.find((m) => m.id === modelId)?.name ?? modelId;
+  }
+
+  let defaultDatabaseConnectionLabel = $derived(
+    activeDatabaseConnections.find((d) => String(d.id) === defaultDatabaseConnectionId)
+      ?.name ?? ""
+  );
+  let defaultModelConfigLabel = $derived(
+    activeModelConfigs.find((m) => String(m.id) === defaultModelConfigId)
+      ?.display_name ?? ""
+  );
+
+
   let saveSuccess = $state<string | null>(null);
 
   // Add DB form
@@ -95,9 +146,7 @@
   // Add model form
   let newModelDisplayName = $state("");
   let newModelName = $state("");
-  let newModelApiKeyId = $state(
-    activeApiKeys.length > 0 ? String(activeApiKeys[0].id) : ""
-  );
+  let newModelApiKeyId = $state("");
   let addingModel = $state(false);
 
   // Edit state
@@ -117,6 +166,74 @@
   let editModelName = $state("");
   let editModelApiKeyId = $state("");
   let savingModelEdit = $state(false);
+
+  let newModelApiKeyProvider = $derived(
+    activeApiKeys.find((k) => String(k.id) === newModelApiKeyId)?.provider ?? ""
+  );
+  let newModelOptions = $derived(
+    props.available_models.models_by_provider[newModelApiKeyProvider] ?? []
+  );
+  let newModelLabel = $derived(
+    modelLabelFromCatalog(newModelName, newModelApiKeyProvider)
+  );
+
+  function apiKeyLabelForId(id: string) {
+    const key = activeApiKeys.find((k) => String(k.id) === id);
+    return key ? apiKeyLabel(key) : "";
+  }
+
+  let newModelApiKeyLabel = $derived(apiKeyLabelForId(newModelApiKeyId));
+  let editModelApiKeyLabel = $derived(apiKeyLabelForId(editModelApiKeyId));
+
+  let editModelApiKeyProvider = $derived(
+    activeApiKeys.find((k) => String(k.id) === editModelApiKeyId)?.provider ??
+      providerFromModelId(editModelName)
+  );
+  let editModelOptions = $derived(
+    props.available_models.models_by_provider[editModelApiKeyProvider] ?? []
+  );
+  let editModelLabel = $derived(
+    modelLabelFromCatalog(editModelName, editModelApiKeyProvider)
+  );
+
+  $effect(() => {
+    if (activeApiKeys.length > 0) {
+      const providerIsSupported = Boolean(
+        props.available_models.models_by_provider[newModelApiKeyProvider]
+      );
+      if (!providerIsSupported) {
+        const supportedKey = activeApiKeys.find(
+          (k) => Boolean(props.available_models.models_by_provider[k.provider])
+        );
+        if (supportedKey && String(supportedKey.id) !== newModelApiKeyId) {
+          newModelApiKeyId = String(supportedKey.id);
+        }
+      }
+    }
+
+    if (
+      newModelName &&
+      newModelApiKeyProvider &&
+      !newModelName.startsWith(`${newModelApiKeyProvider}:`)
+    ) {
+      newModelName = "";
+    }
+
+    if (!newModelDisplayName && newModelName) {
+      const label = modelLabelFromCatalog(newModelName, newModelApiKeyProvider);
+      if (label) {
+        newModelDisplayName = label;
+      }
+    }
+
+    if (
+      editModelName &&
+      editModelApiKeyProvider &&
+      !editModelName.startsWith(`${editModelApiKeyProvider}:`)
+    ) {
+      editModelName = "";
+    }
+  });
 
   let savingConfig = $state(false);
 
@@ -408,15 +525,22 @@
         <Field>
           <FieldLabel>Default database</FieldLabel>
           <FieldContent>
-            <select
-              class="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              bind:value={defaultDatabaseConnectionId}
-            >
-              <option value="" disabled>Select a database connection</option>
-              {#each activeDatabaseConnections as db (db.id)}
-                <option value={String(db.id)}>{db.name}</option>
-              {/each}
-            </select>
+            <Select.Root type="single" bind:value={defaultDatabaseConnectionId}>
+              <Select.Trigger
+                class="w-full"
+                data-placeholder={defaultDatabaseConnectionId === "" ? "" : undefined}
+              >
+                <Select.Value
+                  value={defaultDatabaseConnectionLabel}
+                  placeholder="Select a database connection"
+                />
+              </Select.Trigger>
+              <Select.Content class="w-full">
+                {#each activeDatabaseConnections as db (db.id)}
+                  <Select.Item value={String(db.id)} label={db.name} />
+                {/each}
+              </Select.Content>
+            </Select.Root>
             <FieldDescription>
               Used for new threads unless you pick another DB in the prompt
               input.
@@ -718,17 +842,18 @@
           <CardContent class="space-y-4">
             <div class="grid gap-4 md:grid-cols-2">
               <Field>
-                <FieldLabel for="key-provider">Provider</FieldLabel>
+                <FieldLabel>Provider</FieldLabel>
                 <FieldContent>
-                  <select
-                    id="key-provider"
-                    class="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    bind:value={newKeyProvider}
-                  >
-                    <option value="openai">OpenAI</option>
-                    <option value="anthropic">Anthropic</option>
-                    <option value="google">Google</option>
-                  </select>
+                  <Select.Root type="single" bind:value={newKeyProvider}>
+                    <Select.Trigger class="w-full">
+                      <Select.Value value={providerLabel(newKeyProvider)} />
+                    </Select.Trigger>
+                    <Select.Content class="w-full">
+                      <Select.Item value="openai" label="OpenAI" />
+                      <Select.Item value="anthropic" label="Anthropic" />
+                      <Select.Item value="google" label="Google" />
+                    </Select.Content>
+                  </Select.Root>
                 </FieldContent>
               </Field>
 
@@ -776,15 +901,19 @@
         <Field>
           <FieldLabel>Default model</FieldLabel>
           <FieldContent>
-            <select
-              class="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              bind:value={defaultModelConfigId}
-            >
-              <option value="" disabled>Select a model</option>
-              {#each activeModelConfigs as m (m.id)}
-                <option value={String(m.id)}>{m.display_name}</option>
-              {/each}
-            </select>
+            <Select.Root type="single" bind:value={defaultModelConfigId}>
+              <Select.Trigger
+                class="w-full"
+                data-placeholder={defaultModelConfigId === "" ? "" : undefined}
+              >
+                <Select.Value value={defaultModelConfigLabel} placeholder="Select a model" />
+              </Select.Trigger>
+              <Select.Content class="w-full">
+                {#each activeModelConfigs as m (m.id)}
+                  <Select.Item value={String(m.id)} label={m.display_name} />
+                {/each}
+              </Select.Content>
+            </Select.Root>
             <FieldDescription>
               Used for new threads unless you pick another model in the prompt
               input.
@@ -857,29 +986,57 @@
                       </Field>
 
                       <Field>
-                        <FieldLabel>Model name</FieldLabel>
+                        <FieldLabel>Model</FieldLabel>
                         <FieldContent>
-                          <Input
-                            bind:value={editModelName}
-                            placeholder="e.g. openai:gpt-4o-mini"
-                            autocomplete="off"
-                          />
+                          <Select.Root type="single" bind:value={editModelName}>
+                            <Select.Trigger
+                              class="w-full"
+                              data-placeholder={editModelName === "" ? "" : undefined}
+                            >
+                              <Select.Value
+                                value={editModelLabel}
+                                placeholder="Select a model"
+                              />
+                            </Select.Trigger>
+                            <Select.Content class="w-full">
+                              {#if editModelOptions.length === 0}
+                                <Select.Item
+                                  value=""
+                                  label="No models available"
+                                  disabled
+                                />
+                              {:else}
+                                {#each editModelOptions as model (model.id)}
+                                  <Select.Item value={model.id} label={model.name} />
+                                {/each}
+                              {/if}
+                            </Select.Content>
+                          </Select.Root>
                         </FieldContent>
                       </Field>
 
                       <Field class="md:col-span-2">
                         <FieldLabel>API key for this model</FieldLabel>
                         <FieldContent>
-                          <select
-                            class="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                            bind:value={editModelApiKeyId}
-                          >
-                            {#each activeApiKeys as key (key.id)}
-                              <option value={String(key.id)}>
-                                {key.provider}{key.name ? ` — ${key.name}` : ""}
-                              </option>
-                            {/each}
-                          </select>
+                          <Select.Root type="single" bind:value={editModelApiKeyId}>
+                            <Select.Trigger
+                              class="w-full"
+                              data-placeholder={editModelApiKeyId === "" ? "" : undefined}
+                            >
+                              <Select.Value
+                                value={editModelApiKeyLabel}
+                                placeholder="Select an API key"
+                              />
+                            </Select.Trigger>
+                            <Select.Content class="w-full">
+                              {#each activeApiKeys as key (key.id)}
+                                <Select.Item
+                                  value={String(key.id)}
+                                  label={apiKeyLabel(key)}
+                                />
+                              {/each}
+                            </Select.Content>
+                          </Select.Root>
                         </FieldContent>
                       </Field>
 
@@ -930,17 +1087,38 @@
               </Field>
 
               <Field>
-                <FieldLabel for="model-name">Model name</FieldLabel>
+                <FieldLabel>Model</FieldLabel>
                 <FieldContent>
-                  <Input
-                    id="model-name"
-                    placeholder="e.g. openai:gpt-4o-mini"
+                  <Select.Root
+                    type="single"
                     bind:value={newModelName}
-                    autocomplete="off"
-                  />
+                    disabled={newModelApiKeyId === ""}
+                  >
+                    <Select.Trigger
+                      class="w-full"
+                      data-placeholder={newModelName === "" ? "" : undefined}
+                    >
+                      <Select.Value
+                        value={newModelLabel}
+                        placeholder={
+                          newModelApiKeyId === ""
+                            ? "Select an API key first"
+                            : "Select a model"
+                        }
+                      />
+                    </Select.Trigger>
+                    <Select.Content class="w-full">
+                      {#if newModelOptions.length === 0}
+                        <Select.Item value="" label="No models available" disabled />
+                      {:else}
+                        {#each newModelOptions as model (model.id)}
+                          <Select.Item value={model.id} label={model.name} />
+                        {/each}
+                      {/if}
+                    </Select.Content>
+                  </Select.Root>
                   <FieldDescription>
-                    Must be in SQLSaber format:
-                    <span class="font-mono text-xs">provider:model</span>.
+                    Models are filtered by the selected API key's provider.
                   </FieldDescription>
                 </FieldContent>
               </Field>
@@ -949,17 +1127,22 @@
             <Field>
               <FieldLabel>API key for this model</FieldLabel>
               <FieldContent>
-                <select
-                  class="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  bind:value={newModelApiKeyId}
-                >
-                  <option value="" disabled>Select an API key</option>
-                  {#each activeApiKeys as key (key.id)}
-                    <option value={String(key.id)}>
-                      {key.provider}{key.name ? ` — ${key.name}` : ""}
-                    </option>
-                  {/each}
-                </select>
+                <Select.Root type="single" bind:value={newModelApiKeyId}>
+                  <Select.Trigger
+                    class="w-full"
+                    data-placeholder={newModelApiKeyId === "" ? "" : undefined}
+                  >
+                    <Select.Value
+                      value={newModelApiKeyLabel}
+                      placeholder="Select an API key"
+                    />
+                  </Select.Trigger>
+                  <Select.Content class="w-full">
+                    {#each activeApiKeys as key (key.id)}
+                      <Select.Item value={String(key.id)} label={apiKeyLabel(key)} />
+                    {/each}
+                  </Select.Content>
+                </Select.Root>
                 <FieldDescription>
                   A model can only reference one API key.
                 </FieldDescription>

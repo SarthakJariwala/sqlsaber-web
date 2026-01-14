@@ -13,7 +13,9 @@ from .services import (
     parse_json_body,
     parse_provider,
 )
+from .services.model_catalog import ALLOWED_MODEL_PROVIDERS, normalize_provider
 from .services.serializers import (
+    build_settings_props,
     build_thread_with_messages_props,
     build_threads_list_props,
     build_user_config_props,
@@ -50,7 +52,7 @@ def thread_detail(request, thread_id: int):
 
 @login_required
 def settings_page(request):
-    return render(request, "Settings", props=build_user_config_props(request.user))
+    return render(request, "Settings", props=build_settings_props(request.user))
 
 
 def _settings_error(request, errors: dict):
@@ -58,7 +60,7 @@ def _settings_error(request, errors: dict):
     return render(
         request,
         "Settings",
-        props={**build_user_config_props(request.user), "errors": errors},
+        props={**build_settings_props(request.user), "errors": errors},
         status=422,
     )
 
@@ -194,12 +196,32 @@ def settings_add_api_key(request):
     if error:
         return _settings_error(request, {"form": "Invalid JSON"})
 
-    provider = (data.get("provider", "") or "").strip().lower()
-    name = (data.get("name", "") or "").strip()
-    api_key = (data.get("api_key", "") or "").strip()
+    provider_raw = data.get("provider")
+    if not isinstance(provider_raw, str):
+        return _settings_error(request, {"provider": "provider must be a string"})
+    provider = normalize_provider(provider_raw)
+
+    name = data.get("name")
+    if name is None:
+        name = ""
+    if not isinstance(name, str):
+        return _settings_error(request, {"name": "name must be a string"})
+    name = name.strip()
+
+    api_key = data.get("api_key")
+    if api_key is None:
+        api_key = ""
+    if not isinstance(api_key, str):
+        return _settings_error(request, {"api_key": "api_key must be a string"})
+    api_key = api_key.strip()
 
     if not provider:
         return _settings_error(request, {"provider": "provider is required"})
+    if provider not in ALLOWED_MODEL_PROVIDERS:
+        return _settings_error(
+            request,
+            {"provider": "provider must be one of: anthropic, openai, google"},
+        )
     if not api_key:
         return _settings_error(request, {"api_key": "api_key is required"})
 
@@ -307,6 +329,12 @@ def settings_add_model(request):
     except ValueError as e:
         return _settings_error(request, {"model_name": str(e)})
 
+    if provider not in ALLOWED_MODEL_PROVIDERS:
+        return _settings_error(
+            request,
+            {"model_name": "Only Anthropic, OpenAI, and Google models are supported."},
+        )
+
     api_key = UserApiKey.objects.filter(
         user=request.user,
         id=api_key_id,
@@ -386,6 +414,15 @@ def settings_update_model(request, pk: int):
             provider = parse_provider(model_name).lower()
         except ValueError as e:
             return _settings_error(request, {"model_name": str(e)})
+
+        if provider not in ALLOWED_MODEL_PROVIDERS:
+            return _settings_error(
+                request,
+                {
+                    "model_name": "Only Anthropic, OpenAI, and Google models are supported."
+                },
+            )
+
         model.model_name = model_name
         model.provider = provider
         update_fields.extend(["model_name", "provider"])

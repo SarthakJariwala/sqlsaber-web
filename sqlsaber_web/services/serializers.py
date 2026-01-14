@@ -16,6 +16,7 @@ from sqlsaber_web.services.threads import (
     serialize_thread_summary,
     threads_queryset_for_user,
 )
+from sqlsaber_web.services.model_catalog import get_available_models_catalog
 from sqlsaber_web.services.user_config import (
     compute_user_config_status,
     ensure_user_defaults,
@@ -109,6 +110,14 @@ def build_user_config_props(user: AbstractBaseUser) -> dict:
             }
             for m in models
         ],
+    }
+
+
+def build_settings_props(user: AbstractBaseUser) -> dict:
+    """Build props for the Settings page."""
+    return {
+        **build_user_config_props(user),
+        "available_models": get_available_models_catalog(),
     }
 
 
