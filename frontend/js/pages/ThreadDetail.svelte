@@ -30,11 +30,14 @@
     getDisplayItemKey,
     mergeToolMessages,
     selectActiveIdOrDefault,
+    STATUS_BADGE_STYLES,
     type DatabaseConnection,
     type ModelConfig,
     type ThreadData,
     type MessageData,
   } from "$lib/types/thread";
+  import { Button } from "$lib/components/ui/button";
+  import { Plus } from "@lucide/svelte";
   import { useThreadPolling } from "$lib/hooks/use-thread-polling.svelte";
 
   interface Props {
@@ -156,23 +159,27 @@
     >
       <ChevronLeft class="h-5 w-5" />
     </Link>
-    <div class="flex-1">
+    <div class="min-w-0 flex-1">
       {#if loading}
         <h1 class="text-lg font-semibold">Loading...</h1>
       {:else if polling.thread}
-        <h1 class="text-lg font-semibold">
-          {polling.thread.title || "New conversation"}
-        </h1>
-        <p class="text-sm text-muted-foreground">
-          {#if polling.thread.status === "running" || polling.thread.status === "pending"}
-            <Shimmer as="span" content_length={12}>Processing...</Shimmer>
-          {:else if polling.thread.status === "error"}
-            <span class="text-red-500">Error</span>
-          {:else}
-            Completed
-          {/if}
-        </p>
-        <p class="text-xs text-muted-foreground">
+        <div class="flex items-center gap-2">
+          <h1 class="truncate text-lg font-semibold">
+            {polling.thread.title || "New conversation"}
+          </h1>
+          <span
+            class="shrink-0 rounded-full px-2 py-0.5 text-xs font-medium {STATUS_BADGE_STYLES[
+              polling.thread.status
+            ]}"
+          >
+            {#if polling.thread.status === "running" || polling.thread.status === "pending"}
+              <Shimmer as="span" content_length={8}>Processing</Shimmer>
+            {:else}
+              {polling.thread.status}
+            {/if}
+          </span>
+        </div>
+        <p class="mt-0.5 truncate text-xs text-muted-foreground">
           <span class="font-medium">DB:</span>
           {polling.thread.database_connection_name || selectedDatabaseLabel || "—"}
           <span class="mx-2">•</span>
@@ -184,13 +191,21 @@
       {/if}
     </div>
 
-    <Link
-      href="/settings/"
-      class="text-muted-foreground transition-colors hover:text-foreground"
-      aria-label="Settings"
-    >
-      <Settings class="h-5 w-5" />
-    </Link>
+    <div class="flex items-center gap-3">
+      <Link href="/">
+        <Button size="sm">
+          <Plus class="h-4 w-4" />
+          New Thread
+        </Button>
+      </Link>
+      <Link
+        href="/settings/"
+        class="text-muted-foreground transition-colors hover:text-foreground"
+        aria-label="Settings"
+      >
+        <Settings class="h-5 w-5" />
+      </Link>
+    </div>
   </header>
 
   <div bind:this={messagesContainer} class="flex-1 overflow-y-auto px-4 py-6">

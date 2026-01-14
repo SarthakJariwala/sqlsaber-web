@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Link } from "@inertiajs/svelte";
-  import { Settings } from "@lucide/svelte";
+  import { Plus, Settings } from "@lucide/svelte";
   import { Button } from "$lib/components/ui/button";
   import {
     type ThreadSummary,
@@ -22,16 +22,19 @@
   <!-- Header -->
   <header class="flex items-center justify-between border-b px-4 py-3">
     <h1 class="text-lg font-semibold">Threads</h1>
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-3">
+      <Link href="/">
+        <Button>
+          <Plus class="h-4 w-4" />
+          New Thread
+        </Button>
+      </Link>
       <Link
         href="/settings/"
         class="text-muted-foreground transition-colors hover:text-foreground"
         aria-label="Settings"
       >
         <Settings class="h-5 w-5" />
-      </Link>
-      <Link href="/">
-        <Button>New Thread</Button>
       </Link>
     </div>
   </header>
@@ -50,7 +53,10 @@
       <div class="flex h-full flex-col items-center justify-center gap-4">
         <p class="text-muted-foreground">No threads yet</p>
         <Link href="/">
-          <Button>Start your first conversation</Button>
+          <Button>
+            <Plus class="h-4 w-4" />
+            Start your first conversation
+          </Button>
         </Link>
       </div>
     {:else}
