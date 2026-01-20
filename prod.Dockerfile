@@ -1,15 +1,4 @@
-# Stage 1: Build the Python application using uv
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS python-builder
-ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
-WORKDIR /code
-RUN --mount=type=cache,target=/root/.cache/uv \
-    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    uv sync --no-install-project --no-dev
-ADD . /code
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --no-dev
-
-# Stage 2: Build the frontend files
+# Stage 1: Build the frontend files
 FROM node:24-bookworm-slim AS node-builder
 RUN nodejs -v && npm -v
 WORKDIR /code
@@ -18,14 +7,15 @@ RUN mkdir -p /code/static
 RUN npm install
 RUN npm run build
 
-# Stage 3: Use the final image without uv
-# It is important to use the image that matches the python-builder, as the path to the
-# Python executable must be the same, e.g., using `python:3.11-slim-bookworm`
-# will fail.
-FROM python:3.12-slim-bookworm
+# Stage 2: Runtime image with Python dependencies
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
-# Place executables in the environment at the front of the path
-ENV PATH="/code/.venv/bin:$PATH"
+# Reset the entrypoint, don't invoke `uv`
+ENTRYPOINT []
+
+ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
+ENV VIRTUAL_ENV="/code/.venv"
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 ENV PYTHONUNBUFFERED=1
 ENV DEBUG=0
 
@@ -37,14 +27,18 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 RUN addgroup --system django \
-    && adduser --system --ingroup django django
+    && adduser --system --ingroup django --home /code django
 
-# Copy the application from the builders
-COPY --from=python-builder /code /code
-COPY --from=node-builder /code/static /code/static
+ENV HOME=/code
 
 WORKDIR /code
+
+COPY pyproject.toml uv.lock /code/
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --no-install-project --no-dev --frozen
+
 COPY --chown=django:django . /code
+COPY --from=node-builder --chown=django:django /code/frontend/dist /code/frontend/dist
 
 RUN DEBUG=False python ./manage.py collectstatic --noinput --settings=sqlsaber_web.settings_production
 RUN chown django:django -R static
