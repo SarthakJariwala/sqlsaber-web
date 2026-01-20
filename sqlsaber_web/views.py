@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError
 from django.http import Http404
@@ -34,7 +36,7 @@ def thread_list(request):
 
 
 @login_required
-def thread_detail(request, thread_id: int):
+def thread_detail(request, thread_id: UUID):
     """Render a specific thread detail page."""
     thread_props = build_thread_with_messages_props(request.user, thread_id)
     if thread_props is None:

@@ -1,5 +1,7 @@
 """Thread query and serialization services."""
 
+from uuid import UUID
+
 from django.contrib.auth.models import AbstractBaseUser
 from django.db.models import QuerySet
 
@@ -14,7 +16,10 @@ def threads_queryset_for_user(user: AbstractBaseUser) -> QuerySet[Thread]:
     )
 
 
-def get_thread_for_user(user: AbstractBaseUser, thread_id: int) -> Thread | None:
+def get_thread_for_user(
+    user: AbstractBaseUser,
+    thread_id: UUID | str,
+) -> Thread | None:
     """Retrieve a specific thread for a user, or None if not found."""
     try:
         return threads_queryset_for_user(user).get(pk=thread_id)
@@ -28,7 +33,7 @@ def serialize_thread_summary(thread: Thread) -> dict:
     model = getattr(thread, "model_config", None)
 
     return {
-        "id": thread.id,
+        "id": str(thread.id),
         "title": thread.title,
         "status": thread.status,
         "database_connection_id": thread.database_connection_id,

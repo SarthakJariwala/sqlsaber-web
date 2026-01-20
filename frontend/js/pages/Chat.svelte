@@ -112,7 +112,7 @@
 
     try {
       if (!polling.thread) {
-        const response = await axios.post<{ id: number }>("/api/threads/", {
+        const response = await axios.post<{ id: string }>("/api/threads/", {
           prompt,
           database_connection_id: Number(selectedDatabaseId),
           model_config_id: Number(selectedModelId),

@@ -40,7 +40,7 @@ export interface MessageData {
 
 // Summary type for thread lists (without error details)
 export interface ThreadSummary {
-  id: number;
+  id: string;
   title: string;
   status: ThreadStatus;
   database_connection_id: number | null;

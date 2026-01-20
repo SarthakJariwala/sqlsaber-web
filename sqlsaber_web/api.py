@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET, require_POST
 
@@ -80,14 +82,14 @@ def create_thread(request):
         content={"text": prompt},
     )
 
-    run_sqlsaber_query.defer(thread_id=thread.id, prompt=prompt)
+    run_sqlsaber_query.defer(thread_id=str(thread.id), prompt=prompt)
 
-    return JsonResponse({"id": thread.id})
+    return JsonResponse({"id": str(thread.id)})
 
 
 @require_GET
 @api_login_required
-def get_messages(request, thread_id: int):
+def get_messages(request, thread_id: UUID):
     thread = get_thread_for_user(request.user, thread_id)
     if thread is None:
         return JsonResponse({"error": "Thread not found"}, status=404)
@@ -121,7 +123,7 @@ def get_messages(request, thread_id: int):
 
 @require_POST
 @api_login_required
-def continue_thread(request, thread_id: int):
+def continue_thread(request, thread_id: UUID):
     """Continue an existing thread with a follow-up message."""
     data, error = parse_json_body(request)
     if error:
@@ -195,7 +197,7 @@ def continue_thread(request, thread_id: int):
     )
 
     run_sqlsaber_query.defer(
-        thread_id=thread.id,
+        thread_id=str(thread.id),
         prompt=prompt,
         message_history=thread.content,
     )

@@ -9,7 +9,7 @@ urlpatterns = [
     # Page routes
     path("", views.home, name="home"),
     path("threads/", views.thread_list, name="thread_list"),
-    path("threads/<int:thread_id>/", views.thread_detail, name="thread_detail"),
+    path("threads/<uuid:thread_id>/", views.thread_detail, name="thread_detail"),
     path("settings/", views.settings_page, name="settings"),
     # Settings mutations (Inertia-native)
     path("settings/db-connections/add/", views.settings_add_db, name="settings_add_db"),
@@ -60,12 +60,12 @@ urlpatterns = [
     # API endpoints
     path("api/threads/", api.threads_api, name="api_threads"),
     path(
-        "api/threads/<int:thread_id>/messages/",
+        "api/threads/<uuid:thread_id>/messages/",
         api.get_messages,
         name="api_get_messages",
     ),
     path(
-        "api/threads/<int:thread_id>/continue/",
+        "api/threads/<uuid:thread_id>/continue/",
         api.continue_thread,
         name="api_continue_thread",
     ),

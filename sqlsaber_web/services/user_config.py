@@ -1,6 +1,7 @@
 """User configuration services for managing API keys, database connections, and model configs."""
 
 from dataclasses import dataclass
+from uuid import UUID
 
 from django.contrib.auth.models import AbstractBaseUser
 
@@ -173,7 +174,7 @@ def get_selected_or_default_model(
     )
 
 
-def get_runtime_config_for_thread_id(thread_id: int) -> SQLSaberRuntimeConfig:
+def get_runtime_config_for_thread_id(thread_id: UUID | str) -> SQLSaberRuntimeConfig:
     """Build runtime configuration for executing a thread's query."""
     thread = Thread.objects.select_related(
         "user",

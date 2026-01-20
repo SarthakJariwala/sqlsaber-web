@@ -1,4 +1,5 @@
 from collections.abc import AsyncIterable
+from uuid import UUID
 
 import pydantic
 from asgiref.sync import sync_to_async
@@ -18,7 +19,7 @@ _MessageHistoryAdapter = pydantic.TypeAdapter(list[ModelMessage])
 
 @app.task(queue="sqlsaber")
 async def run_sqlsaber_query(
-    thread_id: int,
+    thread_id: UUID | str,
     prompt: str,
     message_history: list[dict] | None = None,
 ) -> None:

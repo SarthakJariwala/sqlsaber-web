@@ -1,5 +1,7 @@
 """Serialization functions for API and Inertia views."""
 
+from uuid import UUID
+
 from django.contrib.auth.models import AbstractBaseUser
 
 from sqlsaber_web.models import (
@@ -131,7 +133,8 @@ def build_threads_list_props(user: AbstractBaseUser) -> dict:
 
 
 def build_thread_with_messages_props(
-    user: AbstractBaseUser, thread_id: int
+    user: AbstractBaseUser,
+    thread_id: UUID | str,
 ) -> dict | None:
     """Build thread with messages props for API and Inertia views.
 

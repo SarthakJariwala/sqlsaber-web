@@ -1,4 +1,5 @@
 from functools import singledispatchmethod
+from uuid import UUID
 
 from pydantic_ai.messages import (
     AgentStreamEvent,
@@ -17,7 +18,7 @@ from .models import Message
 
 
 class DatabaseStreamingHandler:
-    def __init__(self, thread_id: int):
+    def __init__(self, thread_id: UUID | str):
         self.thread_id = thread_id
         self._buffer: str = ""
         self._current_kind: type[TextPart] | type[ThinkingPart] | None = None
