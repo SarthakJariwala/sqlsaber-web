@@ -38,6 +38,7 @@ class SQLSaberRuntimeConfig:
     model_name: str
     api_key: str
     memory: str | None
+    thinking_level: str | None
 
 
 def parse_provider(model_name: str) -> str:
@@ -236,9 +237,14 @@ def get_runtime_config_for_thread_id(thread_id: UUID | str) -> SQLSaberRuntimeCo
 
     memory = (db.memory or "").strip() or None
 
+    thinking_level = user_settings.thinking_level
+    if thinking_level == "off":
+        thinking_level = None
+
     return SQLSaberRuntimeConfig(
         database_connection=database_connection,
         model_name=model_name,
         api_key=api_key_value,
         memory=memory,
+        thinking_level=thinking_level,
     )

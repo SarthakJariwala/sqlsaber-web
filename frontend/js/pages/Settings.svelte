@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Link, router, page } from "@inertiajs/svelte";
+  import { Link, router } from "@inertiajs/svelte";
   import { ChevronLeft } from "@lucide/svelte";
 
   import { Button } from "$lib/components/ui/button";
@@ -20,6 +20,10 @@
   import { Textarea } from "$lib/components/ui/textarea";
   import * as Select from "$lib/components/ui/select/index.js";
   import * as Tabs from "$lib/components/ui/tabs/index.js";
+  import {
+    THINKING_LEVEL_OPTIONS,
+    type ThinkingLevel,
+  } from "$lib/types/thread";
 
   type DatabaseConnection = {
     id: number;
@@ -64,6 +68,7 @@
     defaults: {
       database_connection_id: number | null;
       model_config_id: number | null;
+      thinking_level: ThinkingLevel;
     };
     database_connections: DatabaseConnection[];
     api_keys: ApiKey[];
@@ -91,6 +96,11 @@
   );
   let defaultModelConfigId = $state(
     props.defaults.model_config_id ? String(props.defaults.model_config_id) : ""
+  );
+  let thinkingLevel = $state<ThinkingLevel>(props.defaults.thinking_level);
+
+  let thinkingLevelLabel = $derived(
+    THINKING_LEVEL_OPTIONS.find((o) => o.value === thinkingLevel)?.label ?? "Off"
   );
 
   const PROVIDER_LABELS: Record<string, string> = {
@@ -478,6 +488,7 @@
         default_model_config_id: defaultModelConfigId
           ? Number(defaultModelConfigId)
           : null,
+        thinking_level: thinkingLevel,
         onboarding_completed: complete,
       },
       {
@@ -977,6 +988,30 @@
                 <FieldDescription>
                   Used for new threads unless you pick another model in the
                   prompt input.
+                </FieldDescription>
+              </FieldContent>
+            </Field>
+
+            <Field>
+              <FieldLabel>Thinking level</FieldLabel>
+              <FieldContent>
+                <Select.Root type="single" bind:value={thinkingLevel}>
+                  <Select.Trigger class="w-full">
+                    <Select.Value
+                      value={thinkingLevelLabel}
+                      placeholder="Select thinking level"
+                    />
+                  </Select.Trigger>
+                  <Select.Content class="w-full">
+                    {#each THINKING_LEVEL_OPTIONS as opt (opt.value)}
+                      <Select.Item value={opt.value} label={opt.label} />
+                    {/each}
+                  </Select.Content>
+                </Select.Root>
+                <FieldDescription>
+                  Controls thinking intensity for models that support extended
+                  thinking. Higher levels use more tokens but may produce better
+                  results.
                 </FieldDescription>
               </FieldContent>
             </Field>

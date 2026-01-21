@@ -80,6 +80,7 @@ def build_user_config_props(user: AbstractBaseUser) -> dict:
         "defaults": {
             "database_connection_id": default_db_id,
             "model_config_id": default_model_id,
+            "thinking_level": settings.thinking_level,
         },
         "database_connections": [
             {

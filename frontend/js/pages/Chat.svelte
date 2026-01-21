@@ -26,8 +26,10 @@
   import {
     getDisplayItemKey,
     mergeToolMessages,
+    THINKING_LEVEL_OPTIONS,
     type DatabaseConnection,
     type ModelConfig,
+    type ThinkingLevel,
   } from "$lib/types/thread";
   import { useThreadPolling } from "$lib/hooks/use-thread-polling.svelte";
 
@@ -37,6 +39,7 @@
     defaults: {
       database_connection_id: number | null;
       model_config_id: number | null;
+      thinking_level: ThinkingLevel;
     };
     database_connections: DatabaseConnection[];
     model_configs: ModelConfig[];
@@ -71,6 +74,11 @@
     props.defaults.model_config_id
       ? String(props.defaults.model_config_id)
       : ""
+  );
+  let selectedThinkingLevel = $state<ThinkingLevel>(props.defaults.thinking_level);
+
+  let selectedThinkingLevelLabel = $derived(
+    THINKING_LEVEL_OPTIONS.find((o) => o.value === selectedThinkingLevel)?.label ?? "Off"
   );
 
   let selectedDatabaseLabel = $derived(
@@ -116,6 +124,7 @@
           prompt,
           database_connection_id: Number(selectedDatabaseId),
           model_config_id: Number(selectedModelId),
+          thinking_level: selectedThinkingLevel,
         });
 
         router.visit(`/threads/${response.data.id}/`);
@@ -125,6 +134,7 @@
           prompt,
           database_connection_id: Number(selectedDatabaseId),
           model_config_id: Number(selectedModelId),
+          thinking_level: selectedThinkingLevel,
         });
         polling.setRunning();
         polling.addTempUserMessage(prompt);
@@ -271,6 +281,22 @@
                 {#each activeModelConfigs as m (m.id)}
                   <PromptInputModelSelectItem value={String(m.id)}>
                     {m.display_name}
+                  </PromptInputModelSelectItem>
+                {/each}
+              </PromptInputModelSelectContent>
+            </PromptInputModelSelect>
+
+            <PromptInputModelSelect bind:value={selectedThinkingLevel} disabled={controlsDisabled}>
+              <PromptInputModelSelectTrigger>
+                <PromptInputModelSelectValue
+                  placeholder="Thinking"
+                  value={selectedThinkingLevelLabel}
+                />
+              </PromptInputModelSelectTrigger>
+              <PromptInputModelSelectContent>
+                {#each THINKING_LEVEL_OPTIONS as opt (opt.value)}
+                  <PromptInputModelSelectItem value={opt.value}>
+                    {opt.label}
                   </PromptInputModelSelectItem>
                 {/each}
               </PromptInputModelSelectContent>

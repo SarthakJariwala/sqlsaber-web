@@ -31,10 +31,12 @@
     mergeToolMessages,
     selectActiveIdOrDefault,
     STATUS_BADGE_STYLES,
+    THINKING_LEVEL_OPTIONS,
     type DatabaseConnection,
     type ModelConfig,
     type ThreadData,
     type MessageData,
+    type ThinkingLevel,
   } from "$lib/types/thread";
   import { Button } from "$lib/components/ui/button";
   import { Plus } from "@lucide/svelte";
@@ -47,6 +49,7 @@
     defaults: {
       database_connection_id: number | null;
       model_config_id: number | null;
+      thinking_level: ThinkingLevel;
     };
     database_connections: DatabaseConnection[];
     model_configs: ModelConfig[];
@@ -61,8 +64,6 @@
   const polling = useThreadPolling(props.thread, props.messages);
 
   let messagesContainer: HTMLDivElement | null = null;
-
-  let loading = $state(false);
   let configLoading = $state(false);
 
   let databaseConnections = $state<DatabaseConnection[]>(props.database_connections);
@@ -89,6 +90,7 @@
       props.defaults.model_config_id
     )
   );
+  let selectedThinkingLevel = $state<ThinkingLevel>(props.defaults.thinking_level);
 
   let selectedDatabaseLabel = $derived(
     activeDatabaseConnections.find((d) => String(d.id) === selectedDatabaseId)
@@ -98,6 +100,10 @@
   let selectedModelLabel = $derived(
     activeModelConfigs.find((m) => String(m.id) === selectedModelId)
       ?.display_name ?? ""
+  );
+
+  let selectedThinkingLevelLabel = $derived(
+    THINKING_LEVEL_OPTIONS.find((o) => o.value === selectedThinkingLevel)?.label ?? "Off"
   );
 
   let controlsDisabled = $derived(!polling.canSubmit || configLoading);
@@ -130,6 +136,7 @@
           ? Number(selectedDatabaseId)
           : null,
         model_config_id: selectedModelId ? Number(selectedModelId) : null,
+        thinking_level: selectedThinkingLevel,
       });
 
       polling.setRunning();
@@ -160,9 +167,7 @@
       <ChevronLeft class="h-5 w-5" />
     </Link>
     <div class="min-w-0 flex-1">
-      {#if loading}
-        <h1 class="text-lg font-semibold">Loading...</h1>
-      {:else if polling.thread}
+      {#if polling.thread}
         <div class="flex items-center gap-2">
           <h1 class="truncate text-lg font-semibold">
             {polling.thread.title || "New conversation"}
@@ -209,11 +214,7 @@
   </header>
 
   <div bind:this={messagesContainer} class="flex-1 overflow-y-auto px-4 py-6">
-    {#if loading}
-      <div class="flex h-full items-center justify-center">
-        <p class="text-muted-foreground">Loading messages...</p>
-      </div>
-    {:else if polling.messages.length === 0}
+    {#if polling.messages.length === 0}
       <div class="flex h-full items-center justify-center">
         <div class="text-center">
           <p class="text-muted-foreground">No messages in this thread</p>
@@ -290,6 +291,22 @@
                 {#each activeModelConfigs as m (m.id)}
                   <PromptInputModelSelectItem value={String(m.id)}>
                     {m.display_name}
+                  </PromptInputModelSelectItem>
+                {/each}
+              </PromptInputModelSelectContent>
+            </PromptInputModelSelect>
+
+            <PromptInputModelSelect bind:value={selectedThinkingLevel} disabled={controlsDisabled}>
+              <PromptInputModelSelectTrigger>
+                <PromptInputModelSelectValue
+                  placeholder="Thinking"
+                  value={selectedThinkingLevelLabel}
+                />
+              </PromptInputModelSelectTrigger>
+              <PromptInputModelSelectContent>
+                {#each THINKING_LEVEL_OPTIONS as opt (opt.value)}
+                  <PromptInputModelSelectItem value={opt.value}>
+                    {opt.label}
                   </PromptInputModelSelectItem>
                 {/each}
               </PromptInputModelSelectContent>

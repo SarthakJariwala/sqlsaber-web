@@ -107,6 +107,14 @@ class UserModelConfig(models.Model):
 class UserSettings(models.Model):
     """User-scoped runtime configuration for SQLSaber."""
 
+    class ThinkingLevel(models.TextChoices):
+        OFF = "off", "Off"
+        MINIMAL = "minimal", "Minimal"
+        LOW = "low", "Low"
+        MEDIUM = "medium", "Medium"
+        HIGH = "high", "High"
+        MAXIMUM = "maximum", "Maximum"
+
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -125,6 +133,11 @@ class UserSettings(models.Model):
         null=True,
         blank=True,
         related_name="+",
+    )
+    thinking_level = models.CharField(
+        max_length=10,
+        choices=ThinkingLevel.choices,
+        default=ThinkingLevel.MEDIUM,
     )
     onboarding_completed = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)

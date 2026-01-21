@@ -2,6 +2,17 @@
 
 export type ThreadStatus = "pending" | "running" | "completed" | "error";
 
+export type ThinkingLevel = "off" | "minimal" | "low" | "medium" | "high" | "maximum";
+
+export const THINKING_LEVEL_OPTIONS: { value: ThinkingLevel; label: string }[] = [
+  { value: "off", label: "Off" },
+  { value: "minimal", label: "Minimal" },
+  { value: "low", label: "Low" },
+  { value: "medium", label: "Medium" },
+  { value: "high", label: "High" },
+  { value: "maximum", label: "Maximum" },
+];
+
 // User configuration types shared across Chat and Settings pages
 export interface DatabaseConnection {
   id: number;

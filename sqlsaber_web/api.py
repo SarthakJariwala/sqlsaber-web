@@ -16,6 +16,29 @@ from .services import (
 )
 from .tasks import run_sqlsaber_query
 
+VALID_THINKING_LEVELS = frozenset({"off", "minimal", "low", "medium", "high", "maximum"})
+
+
+def _validate_optional_int(value, field_name: str) -> JsonResponse | None:
+    """Validate that a value is either None or an int. Returns error response or None."""
+    if value is not None and not isinstance(value, int):
+        return JsonResponse({"error": f"{field_name} must be an integer"}, status=400)
+    return None
+
+
+def _validate_thinking_level(value) -> JsonResponse | None:
+    """Validate thinking_level if provided. Returns error response or None."""
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        return JsonResponse({"error": "thinking_level must be a string"}, status=400)
+    if value not in VALID_THINKING_LEVELS:
+        return JsonResponse(
+            {"error": f"thinking_level must be one of: {', '.join(sorted(VALID_THINKING_LEVELS))}"},
+            status=400,
+        )
+    return None
+
 
 @api_login_required
 def threads_api(request):
@@ -42,15 +65,14 @@ def create_thread(request):
 
     database_connection_id = data.get("database_connection_id")
     model_config_id = data.get("model_config_id")
+    thinking_level = data.get("thinking_level")
 
-    if database_connection_id is not None and not isinstance(
-        database_connection_id, int
-    ):
-        return JsonResponse(
-            {"error": "database_connection_id must be an integer"}, status=400
-        )
-    if model_config_id is not None and not isinstance(model_config_id, int):
-        return JsonResponse({"error": "model_config_id must be an integer"}, status=400)
+    if error := _validate_optional_int(database_connection_id, "database_connection_id"):
+        return error
+    if error := _validate_optional_int(model_config_id, "model_config_id"):
+        return error
+    if error := _validate_thinking_level(thinking_level):
+        return error
 
     db = get_selected_or_default_db(
         request.user,
@@ -82,7 +104,11 @@ def create_thread(request):
         content={"text": prompt},
     )
 
-    run_sqlsaber_query.defer(thread_id=str(thread.id), prompt=prompt)
+    run_sqlsaber_query.defer(
+        thread_id=str(thread.id),
+        prompt=prompt,
+        thinking_level_override=thinking_level,
+    )
 
     return JsonResponse({"id": str(thread.id)})
 
@@ -135,15 +161,14 @@ def continue_thread(request, thread_id: UUID):
 
     database_connection_id = data.get("database_connection_id")
     model_config_id = data.get("model_config_id")
+    thinking_level = data.get("thinking_level")
 
-    if database_connection_id is not None and not isinstance(
-        database_connection_id, int
-    ):
-        return JsonResponse(
-            {"error": "database_connection_id must be an integer"}, status=400
-        )
-    if model_config_id is not None and not isinstance(model_config_id, int):
-        return JsonResponse({"error": "model_config_id must be an integer"}, status=400)
+    if error := _validate_optional_int(database_connection_id, "database_connection_id"):
+        return error
+    if error := _validate_optional_int(model_config_id, "model_config_id"):
+        return error
+    if error := _validate_thinking_level(thinking_level):
+        return error
 
     thread = get_thread_for_user(request.user, thread_id)
     if thread is None:
@@ -200,6 +225,7 @@ def continue_thread(request, thread_id: UUID):
         thread_id=str(thread.id),
         prompt=prompt,
         message_history=thread.content,
+        thinking_level_override=thinking_level,
     )
 
     return JsonResponse({"id": thread.id, "status": "queued"})

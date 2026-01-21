@@ -7,7 +7,7 @@ from django.shortcuts import redirect
 from django.views.decorators.http import require_POST
 from inertia import render
 
-from .models import UserApiKey, UserDatabaseConnection, UserModelConfig
+from .models import UserApiKey, UserDatabaseConnection, UserModelConfig, UserSettings
 from .services import (
     compute_user_config_status,
     ensure_user_defaults,
@@ -585,6 +585,22 @@ def settings_update_config(request):
 
         settings.onboarding_completed = onboarding_completed
         update_fields.append("onboarding_completed")
+
+    thinking_level = data.get("thinking_level")
+    if thinking_level is not None:
+        if not isinstance(thinking_level, str):
+            return _settings_error(
+                request,
+                {"thinking_level": "must be a string"},
+            )
+        valid_levels = [choice[0] for choice in UserSettings.ThinkingLevel.choices]
+        if thinking_level not in valid_levels:
+            return _settings_error(
+                request,
+                {"thinking_level": f"must be one of: {', '.join(valid_levels)}"},
+            )
+        settings.thinking_level = thinking_level
+        update_fields.append("thinking_level")
 
     if update_fields:
         settings.save(update_fields=[*update_fields, "updated_at"])

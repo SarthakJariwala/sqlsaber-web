@@ -22,6 +22,7 @@ async def run_sqlsaber_query(
     thread_id: UUID | str,
     prompt: str,
     message_history: list[dict] | None = None,
+    thinking_level_override: str | None = None,
 ) -> None:
     try:
         await Thread.objects.filter(pk=thread_id).aupdate(status=Thread.Status.RUNNING)
@@ -40,9 +41,13 @@ async def run_sqlsaber_query(
         if not runtime_config.database_connection:
             raise RuntimeError("Database connection is empty. Update it in /settings.")
 
+        effective_thinking_level = thinking_level_override or runtime_config.thinking_level
+        if effective_thinking_level == "off":
+            effective_thinking_level = None
+
         async with SQLSaber(
             database=runtime_config.database_connection,
-            thinking=True,
+            thinking_level=effective_thinking_level,
             api_key=runtime_config.api_key,
             model_name=runtime_config.model_name,
             memory=runtime_config.memory,
