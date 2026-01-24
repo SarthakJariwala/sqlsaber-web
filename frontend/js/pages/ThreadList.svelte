@@ -1,21 +1,47 @@
 <script lang="ts">
-  import { Link } from "@inertiajs/svelte";
+  import { Link, router } from "@inertiajs/svelte";
   import { Plus, Settings } from "@lucide/svelte";
+  import { Badge } from "$lib/components/ui/badge";
   import { Button } from "$lib/components/ui/button";
+  import {
+    Pagination,
+    PaginationContent,
+    PaginationItem,
+    PaginationLink,
+    PaginationEllipsis,
+    PaginationNext,
+    PaginationPrevious,
+  } from "$lib/components/ui/pagination";
   import {
     type ThreadSummary,
     formatThreadDate,
     STATUS_BADGE_STYLES,
   } from "$lib/types/thread";
 
+  type PaginationMeta = {
+    count: number;
+    perPage: number;
+    page: number;
+  };
+
   interface Props {
     threads: ThreadSummary[];
+    pagination: PaginationMeta;
   }
 
-  let { threads }: Props = $props();
+  let { threads, pagination }: Props = $props();
 
   let loading = $state(false);
   let error = $state<string | null>(null);
+
+  function handlePageChange(nextPage: number) {
+    if (nextPage === pagination.page) return;
+    router.get(
+      "/threads/",
+      { page: nextPage },
+      { preserveScroll: true, preserveState: true }
+    );
+  }
 </script>
 
 <div class="flex h-screen flex-col">
@@ -75,17 +101,51 @@
                   {formatThreadDate(thread.updated_at)}
                 </p>
               </div>
-              <span
-                class="rounded-full px-2 py-1 text-xs font-medium {STATUS_BADGE_STYLES[
-                  thread.status
-                ]}"
-              >
+              <Badge class={STATUS_BADGE_STYLES[thread.status]}>
                 {thread.status}
-              </span>
+              </Badge>
             </div>
           </Link>
         {/each}
       </div>
+      {#if pagination.count > pagination.perPage}
+        <div class="mx-auto max-w-3xl border-t px-4 py-4">
+          <Pagination
+            count={pagination.count}
+            perPage={pagination.perPage}
+            page={pagination.page}
+            siblingCount={1}
+            onPageChange={handlePageChange}
+          >
+            {#snippet child({ props, pages, currentPage })}
+              <nav {...props}>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious />
+                  </PaginationItem>
+                  {#each pages as pageItem (pageItem.key)}
+                    {#if pageItem.type === "ellipsis"}
+                      <PaginationItem>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    {:else}
+                      <PaginationItem>
+                        <PaginationLink
+                          page={pageItem}
+                          isActive={currentPage === pageItem.value}
+                        />
+                      </PaginationItem>
+                    {/if}
+                  {/each}
+                  <PaginationItem>
+                    <PaginationNext />
+                  </PaginationItem>
+                </PaginationContent>
+              </nav>
+            {/snippet}
+          </Pagination>
+        </div>
+      {/if}
     {/if}
   </div>
 </div>

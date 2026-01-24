@@ -3,10 +3,14 @@
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
   import CheckCircleIcon from "@lucide/svelte/icons/check-circle";
   import LoaderIcon from "@lucide/svelte/icons/loader";
-  import { slide } from "svelte/transition";
   import { Response } from "$lib/components/ai-elements/response";
   import { Shimmer } from "$lib/components/ai-elements/shimmer";
   import * as Code from "$lib/components/ai-elements/code";
+  import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+  } from "$lib/components/ui/collapsible";
   import {
     getToolDisplayName,
     parseToolArgs,
@@ -21,8 +25,8 @@
 
   interface Props {
     toolName: string;
-    args?: unknown; // Can be string (JSON) or object
-    result?: unknown; // Can be string (JSON) or object
+    args?: unknown;
+    result?: unknown;
     class?: string;
   }
 
@@ -38,25 +42,18 @@
   let parsedArgs = $derived(parseToolArgs(args));
   let parsedResult = $derived(parseToolResult(result));
 
-  function toggle() {
-    expanded = !expanded;
-  }
-
-  // Get the SQL query from args if this is execute_sql
   let sqlQuery = $derived(
     toolName === "execute_sql" && parsedArgs.query
       ? String(parsedArgs.query)
       : null
   );
 
-  // Get the table pattern from args if this is introspect_schema
   let tablePattern = $derived(
     toolName === "introspect_schema" && parsedArgs.table_pattern
       ? String(parsedArgs.table_pattern)
       : null
   );
 
-  // Format result based on tool type
   let formattedResult = $derived.by(() => {
     if (!hasResult || !parsedResult) return null;
 
@@ -68,17 +65,14 @@
       case "list_tables":
         return formatTableListAsMarkdown(parsedResult as ListTablesResult);
       default:
-        // Fallback: show as formatted JSON
         return "```json\n" + JSON.stringify(parsedResult, null, 2) + "\n```";
     }
   });
 </script>
 
-<div class={cn("rounded-lg border bg-card", className)}>
-  <button
-    type="button"
-    onclick={toggle}
-    class="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-muted/50 transition-colors"
+<Collapsible bind:open={expanded} class={cn("my-4", className)}>
+  <CollapsibleTrigger
+    class="flex w-full items-center gap-2 py-2 text-left hover:bg-muted/50 transition-colors"
   >
     <ChevronRightIcon
       class={cn(
@@ -104,42 +98,35 @@
         >
       </span>
     {/if}
-  </button>
+  </CollapsibleTrigger>
 
-  {#if expanded}
-    <div
-      transition:slide={{ duration: 200 }}
-      class="border-t px-4 py-3 space-y-4"
-    >
-      {#if sqlQuery}
-        <div>
+  <CollapsibleContent class="px-4 py-3 space-y-4">
+    {#if sqlQuery}
+      <div>
+        <div class="text-xs font-medium text-muted-foreground mb-2">Query</div>
+        <Code.Root lang="sql" code={sqlQuery} hideLines>
+          <Code.CopyButton />
+        </Code.Root>
+      </div>
+    {/if}
+
+    {#if formattedResult}
+      <div>
+        {#if sqlQuery}
           <div class="text-xs font-medium text-muted-foreground mb-2">
-            Query
+            Results
           </div>
-          <Code.Root lang="sql" code={sqlQuery} hideLines>
-            <Code.CopyButton />
-          </Code.Root>
+        {/if}
+        <div class="prose prose-sm dark:prose-invert max-w-none">
+          <Response content={formattedResult} />
         </div>
-      {/if}
+      </div>
+    {/if}
 
-      {#if formattedResult}
-        <div>
-          {#if sqlQuery}
-            <div class="text-xs font-medium text-muted-foreground mb-2">
-              Results
-            </div>
-          {/if}
-          <div class="prose prose-sm dark:prose-invert max-w-none">
-            <Response content={formattedResult} />
-          </div>
-        </div>
-      {/if}
-
-      {#if !sqlQuery && !formattedResult && !hasResult}
-        <div class="space-y-2">
-          <Shimmer content_length={30}>Executing tool...</Shimmer>
-        </div>
-      {/if}
-    </div>
-  {/if}
-</div>
+    {#if !sqlQuery && !formattedResult && !hasResult}
+      <div class="space-y-2">
+        <Shimmer content_length={30}>Executing tool...</Shimmer>
+      </div>
+    {/if}
+  </CollapsibleContent>
+</Collapsible>
