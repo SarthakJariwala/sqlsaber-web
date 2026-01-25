@@ -108,7 +108,7 @@
           </Link>
         {/each}
       </div>
-      {#if pagination.count > pagination.perPage}
+      {#if pagination && pagination.count > pagination.perPage}
         <div class="mx-auto max-w-3xl border-t px-4 py-4">
           <Pagination
             count={pagination.count}

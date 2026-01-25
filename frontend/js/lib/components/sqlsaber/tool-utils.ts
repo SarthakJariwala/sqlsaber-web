@@ -73,7 +73,6 @@ export interface SqlResult {
 	success: boolean;
 	row_count: number;
 	results: Record<string, unknown>[];
-	truncated: boolean;
 	error?: string;
 }
 
@@ -129,11 +128,7 @@ export function formatSqlResultsAsMarkdown(result: SqlResult): string {
 		(row) => `| ${columns.map((col) => formatCellValue(row[col])).join(" | ")} |`
 	);
 
-	let markdown = [header, separator, ...rows].join("\n");
-
-	if (result.truncated) {
-		markdown += "\n\n*Results truncated*";
-	}
+	const markdown = [header, separator, ...rows].join("\n");
 
 	return markdown;
 }
